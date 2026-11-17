@@ -1,0 +1,185 @@
+@font-face {
+  font-family: 'Manrope';
+  src: url('/fonts/Manrope-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Manrope';
+  src: url('/fonts/Manrope-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Manrope';
+  src: url('/fonts/Manrope-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Manrope';
+  src: url('/fonts/Manrope-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fraunces';
+  src: url('/fonts/Fraunces-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fraunces';
+  src: url('/fonts/Fraunces-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Surfaces — opaque content only (no glass for reading UI) */
+  --cream: #f7f1e8;
+  --cream-deep: #efe6d8;
+  --wheat: #e8dcc8;
+  --surface: #fffcf7;
+  --surface-muted: #f3ebe0;
+  --surface-opaque: #fffcf7;
+  --ink: #3d2b1f;
+  --ink-soft: #5c4a3a;
+  --muted: #7a6a5a;
+  --line: #ddd0be;
+  --line-strong: #cbbba3;
+  --terracotta: #c45c26;
+  --terracotta-deep: #a3481c;
+  --terracotta-soft: #f3e0d4;
+  --success: #2f6b45;
+  --success-soft: #e5f0e9;
+  --danger: #9b2c2c;
+  --danger-soft: #f6e4e4;
+  --focus: #c45c26;
+  --scrim: rgba(45, 32, 22, 0.55);
+
+  /* Radius — low, editorial (no pills) */
+  --radius-sm: 0.125rem;
+  --radius: 0.2rem;
+  --radius-lg: 0.35rem;
+  --shadow-soft: none;
+  --shadow-elevated: 0 12px 40px rgba(61, 43, 31, 0.18);
+
+  /* Controls — one rhythm for buttons / inputs / selects */
+  --control-h: 3rem;
+  --control-px: 1rem;
+  --control-py: 0.65rem;
+  --control-fs: 1rem;
+
+  /* Type */
+  --font: 'Manrope', 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --text-display: clamp(2rem, 4.5vw, 3.2rem);
+  --text-title: clamp(1.45rem, 3vw, 2rem);
+  --text-body: 1rem;
+  --text-meta: 0.82rem;
+
+  /* Safe areas — iPhone notch / home bar / Android gesture */
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+
+  /* Space & layout */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-page: clamp(1rem, 3vw, 2rem);
+  --space-page-x: max(var(--space-page), var(--sal), var(--sar));
+  --space-page-b: max(1.25rem, calc(var(--sab) + 0.75rem));
+  --max-content: 72rem;
+  --topbar-h: 4rem;
+  --touch-min: 2.75rem;
+  --drawer-width: min(100%, 28rem);
+  --drawer-wide: min(100%, 40rem);
+  --z-masthead: 40;
+  --z-modal: 50;
+  --z-drawer: 55;
+  --z-toast: 60;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  margin: 0;
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  font-size: 16px; /* evita zoom automático en iOS */
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+a {
+  color: var(--terracotta);
+}
+
+::selection {
+  background: var(--terracotta-soft);
+  color: var(--ink);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}

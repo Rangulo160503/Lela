@@ -1,0 +1,36 @@
+PANADERIA LELA — INSTRUCCIONES
+===============================
+
+1) Extraiga esta carpeta en la COMPUTADORA PRINCIPAL.
+2) Ejecute Iniciar.bat y deje la ventana abierta.
+3) Abra el navegador en:  http://127.0.0.1:3000
+4) Otros dispositivos (misma Wi-Fi):
+   http://IP-DE-LA-PC:3000
+   (la IP aparece en la ventana al iniciar)
+
+5) Para apagar el sistema: Detener.bat
+
+USUARIOS INICIALES
+------------------
+  admin    / 1234   (administrador)
+  empleado / 0000   (operacion diaria)
+
+Cambie los PIN en Administracion > Usuarios.
+
+DATOS
+-----
+  Base de datos: data\panaderia-lela.sqlite
+  Respaldos:     data\backups\
+
+IMPRESORA
+---------
+  Configure en Admin > Impresora el nombre Windows
+  de la Epson TM-U220 instalada en la PC principal.
+
+FIREWALL
+--------
+  Si el celular no conecta, permita Node.js en el
+  Firewall de Windows (red privada).
+
+No se necesita Internet ni instalar programas.
+Detalle completo: INFORME-MVP.md y README.md
