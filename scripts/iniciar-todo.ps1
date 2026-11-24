@@ -138,7 +138,16 @@ function Update-FromGitHub {
       throw 'git fetch fallo (revisa Internet / acceso a GitHub).'
     }
 
-    $code = Invoke-Git @('checkout', '-B', $Branch, "origin/$Branch")
+    # ZIP / carpeta suelta: los archivos son "untracked" y bloquean checkout.
+    # Borramos todo excepto .git y runtime (Node/MinGit); data ya esta en temp.
+    Write-Host '  Preparando checkout (limpia archivos del ZIP que bloquean)...'
+    Get-ChildItem -LiteralPath $Root -Force | Where-Object {
+      $_.Name -notin @('.git', 'runtime')
+    } | ForEach-Object {
+      Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    $code = Invoke-Git @('checkout', '-f', '-B', $Branch, "origin/$Branch")
     if ($code -ne 0) { throw 'git checkout fallo.' }
 
     $code = Invoke-Git @('reset', '--hard', "origin/$Branch")
@@ -207,14 +216,19 @@ function Ensure-Node {
 }
 
 function Invoke-Npm {
-  param([Parameter(ValueFromRemainingArguments = $true)][string[]]$NpmArgs)
-  if (Test-Path $npmCmd) {
-    & $npmCmd @NpmArgs
-  } else {
-    & npm.cmd @NpmArgs
-  }
+  param(
+    [Parameter(Mandatory = $true)]
+    [string[]]$NpmArguments
+  )
+  $exe = if (Test-Path $npmCmd) { $npmCmd } else { 'npm.cmd' }
+  Write-Host ("  > npm " + ($NpmArguments -join ' '))
+  # Argumentos por separado (no un solo string); npm.cmd via cmd evita rarezas de PS
+  $quoted = ($NpmArguments | ForEach-Object {
+      if ($_ -match '[\s"]') { '"' + ($_ -replace '"', '\"') + '"' } else { $_ }
+    }) -join ' '
+  cmd.exe /c "`"$exe`" $quoted"
   if ($LASTEXITCODE -ne 0) {
-    throw "npm fallo: $($NpmArgs -join ' ')"
+    throw "npm fallo: $($NpmArguments -join ' ')"
   }
 }
 
@@ -236,7 +250,7 @@ function Install-Dependencies {
   }
 
   Write-Host '  npm install --ignore-scripts (usa binarios precompilados)...'
-  Invoke-Npm 'install', '--ignore-scripts'
+  Invoke-Npm -NpmArguments @('install', '--ignore-scripts')
 
   if (-not (Test-Path $sqlitePre)) {
     throw 'Falta prebuild better-sqlite3 (win32-x64). Revisa Internet / antivirus.'
@@ -300,7 +314,7 @@ Write-Host '  5) Dependencias...'
 Install-Dependencies
 
 Write-Host '  6) UI React (build)...'
-Invoke-Npm 'run', 'build:web'
+Invoke-Npm -NpmArguments @('run', 'build:web')
 
 if (-not (Test-Path (Join-Path $Root 'lite\index.html'))) {
   Write-Host '  AVISO: falta lite/ (iPad 4 usara React; puede fallar en iOS 9).'
