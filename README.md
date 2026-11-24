@@ -48,7 +48,7 @@ npm.cmd run pack:portable
 
 ## Arquitectura
 
-API → Abstracciones → Flujo → Reglas / DA / Servicios · Frontend principal: React (`dist/`) · Fallback iPad 4: `lite/`
+API → Abstracciones → Flujo → Reglas / DA / Servicios · Frontend principal: **`lite/`** · React opcional: `/react`
 
 ## Identidad visual
 
@@ -77,7 +77,8 @@ Paleta artesanal (crema, café, terracota). Tipografías autoalojadas: **Fraunce
 - Capturas: `docs/screenshots/lela-*-redesign.png`
 
 - **UI principal = React** (`npm run build:web` → `dist/`). Abrí `http://IP:3000/` — Facturación (Nueva venta), Inventario, Cierre, Dashboard, Config. Es la versión del criterio del cliente.
-- **iPad 4 / iOS 9:** automáticamente `lite/` (solo `lite.css`, sin lela-ds grid/gap/clamp), o forzá `http://IP:3000/lite`. Auth por `?token=` (sin header Authorization — Safari 9 + HTTPS lo cuelga). Tab **Gastos**: foto de factura (rellena si hay visión) o manual; alimenta Cierre → Gastos. No sustituye la UI principal en PC/teléfonos modernos.
+- **UI por defecto (`/`):** `lite/` — Facturar · Saldos de inventario · **Gastos** (foto de factura o manual) · Cierre. iPad 4 / iOS 9 incluidos. Auth por `?token=` en Safari viejo.
+- **React opcional:** `http://IP:3000/react`
 - Preferí Wi‑Fi LAN antes que el túnel en tablets viejas.
 
 Fórmulas de venta/inventario intactas; sin dependencias nuevas.
