@@ -117,20 +117,19 @@ app.use('/uploads', express.static(path.join(DATA_DIR, 'uploads'), { maxAge: '1h
 app.use('/api', createRouter(flujo, mvp))
 
 /**
- * UI principal = React (`dist/`) — la que el cliente ya daba por buena.
- * `lite/` solo para iPad 4 / iOS 9 (o ruta explícita `/lite`).
+ * UI principal = `lite/` (Gastos foto/manual, Cierre, Saldos, iPad 4).
+ * React (`dist/`) queda en `/react` o `?ui=react` por si hace falta.
  */
 const DIST_DIR = path.join(APP_ROOT, 'dist')
 const PUBLIC_DIR = path.join(APP_ROOT, 'public')
 const LITE_IMAGES = path.join(LITE_DIR, 'images')
 
-if (!fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
-  console.error('Falta dist/index.html. Ejecutá: npm run build:web')
+if (!fs.existsSync(path.join(LITE_DIR, 'index.html'))) {
+  console.error('Falta lite/index.html (UI principal).')
   process.exit(1)
 }
-if (!fs.existsSync(path.join(LITE_DIR, 'index.html'))) {
-  console.error('Falta lite/index.html (fallback iOS 9).')
-  process.exit(1)
+if (!fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
+  console.warn('AVISO: falta dist/index.html (UI React opcional en /react).')
 }
 
 function staticOpts(longCache: boolean) {
@@ -150,14 +149,11 @@ function staticOpts(longCache: boolean) {
 const staticLong = staticOpts(true)
 const staticApp = staticOpts(false)
 
-/** iPad (cualquier iOS) + iPhone/iPod iOS 9 → lite. React no corre bien en Safari viejo. */
+/** lite por defecto; React solo con /react o ?ui=react */
 function wantsLite(req: express.Request): boolean {
-  if (req.path === '/lite' || req.path.startsWith('/lite/')) return true
-  const ua = String(req.headers['user-agent'] || '')
-  if (/iPad/i.test(ua)) return true
-  if (/(iPhone|iPod).*OS 9[_.]/i.test(ua)) return true
-  if (/(iPhone|iPod)/i.test(ua) && /Version\/9\./i.test(ua)) return true
-  return false
+  if (req.path === '/react' || req.path.startsWith('/react/')) return false
+  if (String(req.query.ui || '') === 'react') return false
+  return true
 }
 
 if (fs.existsSync(LITE_IMAGES)) {
@@ -171,10 +167,10 @@ if (fs.existsSync(PUBLIC_DIR)) {
 
 app.use('/lite', express.static(LITE_DIR, { ...staticApp, index: 'index.html' }))
 
-/** HTML ANTES que static(dist): si no, dist/index.html gana y el iPad recibe React muerto. */
-app.get(['/', '/index.html'], (req, res) => {
-  res.setHeader('Vary', 'User-Agent')
+app.get(['/', '/index.html', '/lite', '/lite/'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+  res.setHeader('Pragma', 'no-cache')
+  res.setHeader('Expires', '0')
   if (wantsLite(req)) {
     res.sendFile(path.join(LITE_DIR, 'index.html'))
     return
@@ -182,10 +178,21 @@ app.get(['/', '/index.html'], (req, res) => {
   res.sendFile(path.join(DIST_DIR, 'index.html'))
 })
 
-/** Assets React sin index automático */
-app.use(express.static(DIST_DIR, { ...staticApp, index: false }))
+app.get(['/react', '/react/', '/react/index.html'], (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+  if (!fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
+    res.status(404).send('UI React no construida (npm run build:web).')
+    return
+  }
+  res.sendFile(path.join(DIST_DIR, 'index.html'))
+})
 
-/** SPA fallback (React Router) */
+/** Assets React (JS/CSS hasheados) sin index automático */
+if (fs.existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR, { ...staticApp, index: false }))
+}
+
+/** SPA fallback */
 app.use((req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next()
   if (req.path.startsWith('/api')) return next()
@@ -194,10 +201,13 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/fonts')) return next()
   if (req.path.startsWith('/lite')) return next()
   if (/\.[a-z0-9]+$/i.test(req.path)) return next()
-  res.setHeader('Vary', 'User-Agent')
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
   if (wantsLite(req)) {
     res.sendFile(path.join(LITE_DIR, 'index.html'))
+    return
+  }
+  if (!fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
+    res.status(404).send('UI no disponible.')
     return
   }
   res.sendFile(path.join(DIST_DIR, 'index.html'))
@@ -207,8 +217,8 @@ const server = app.listen(PORT, HOST, () => {
   const lans = getLanAddresses()
   console.log('')
   console.log('  Panadería Lela — servidor local')
-  console.log(`  Abrir:   http://127.0.0.1:${PORT}/   (UI React)`)
-  console.log(`  iPad 4:  http://127.0.0.1:${PORT}/lite  (o auto por iOS 9)`)
+  console.log(`  Abrir:   http://127.0.0.1:${PORT}/        (UI lite: Gastos, Cierre, …)`)
+  console.log(`  React:   http://127.0.0.1:${PORT}/react   (opcional)`)
   for (const ip of lans) {
     console.log(`  Red:     http://${ip}:${PORT}/`)
   }

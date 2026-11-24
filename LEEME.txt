@@ -13,6 +13,8 @@ OPCION A — ZIP / carpeta en la PC de la panaderia
    - Abre un link publico (tunel) y deja la ventana abierta.
 3) Use ese link en iPad / celular / otra PC.
    En esta PC tambien: http://127.0.0.1:3000
+   La UI es lite (barra: Facturar · Saldos · Gastos · Cierre).
+   Gastos: foto de factura o carga manual.
 4) Para apagar:  Detener.bat
 
 Solo hay DOS botones:
