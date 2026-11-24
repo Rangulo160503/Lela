@@ -16,7 +16,7 @@ Solo **dos** archivos en la raíz:
 
 | Archivo | Qué hace |
 |---------|----------|
-| **`Iniciar.bat`** | Instala lo que falte (Node portable si hace falta, `npm install`, build), reinicia, servidor `:3000` + túnel público, abre el navegador |
+| **`Iniciar.bat`** | Instala Git/Node si faltan, **`git pull`** desde GitHub (preserva `data/`), `npm install` + build, reinicia, servidor `:3000` + túnel, abre el navegador |
 | **`Detener.bat`** | Apaga servidor y túnel |
 
 También sirve tras **Download ZIP** de [github.com/Rangulo160503/Lela](https://github.com/Rangulo160503/Lela) (primera vez necesita Internet).

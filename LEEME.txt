@@ -6,7 +6,9 @@ OPCION A — ZIP / carpeta en la PC de la panaderia
 1) Extraiga la carpeta en la COMPUTADORA PRINCIPAL
    (ej. C:\Panaderia-Lela).
 2) Doble clic en:  Iniciar.bat
-   - La primera vez instala Node (si falta), dependencias y arma la UI.
+   - Actualiza el codigo desde GitHub (git pull; instala Git si falta).
+   - Preserva data\ (SQLite, fotos, respaldos).
+   - Instala Node si falta, dependencias y arma la UI.
    - Reinicia si ya estaba corriendo.
    - Abre un link publico (tunel) y deja la ventana abierta.
 3) Use ese link en iPad / celular / otra PC.
@@ -14,7 +16,7 @@ OPCION A — ZIP / carpeta en la PC de la panaderia
 4) Para apagar:  Detener.bat
 
 Solo hay DOS botones:
-  Iniciar.bat  = encender / reiniciar / tunel
+  Iniciar.bat  = actualizar (git) / encender / reiniciar / tunel
   Detener.bat  = apagar todo
 
 OPCION B — Descargar desde GitHub
