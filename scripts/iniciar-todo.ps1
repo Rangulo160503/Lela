@@ -320,26 +320,49 @@ if (-not (Test-Path (Join-Path $Root 'lite\index.html'))) {
   Write-Host '  AVISO: falta lite/ (iPad 4 usara React; puede fallar en iOS 9).'
 }
 
+$serverLog = Join-Path $Root 'server-log.txt'
+$serverErr = Join-Path $Root 'server-err.txt'
+Remove-Item $serverLog, $serverErr -Force -ErrorAction SilentlyContinue
+
 Write-Host '  7) Servidor en http://127.0.0.1:3000 ...'
+# Rutas con espacios (ej. "Hp 600 G1"): Start-Process no cita ArgumentList solo;
+# hay que pasar UNA cadena con comillas embebidas.
 if (Test-Path $nodeExe) {
   $tsx = Join-Path $Root 'node_modules\tsx\dist\cli.mjs'
-  $server = Start-Process -FilePath $nodeExe -ArgumentList $tsx, 'server/src/index.ts' `
-    -WorkingDirectory $Root -PassThru -WindowStyle Minimized
+  if (-not (Test-Path $tsx)) { throw "Falta tsx: $tsx" }
+  $serverArgs = "`"$tsx`" `"server/src/index.ts`""
+  $server = Start-Process -FilePath $nodeExe -ArgumentList $serverArgs `
+    -WorkingDirectory $Root -PassThru -WindowStyle Hidden `
+    -RedirectStandardOutput $serverLog -RedirectStandardError $serverErr
 } else {
-  $server = Start-Process -FilePath 'npm.cmd' -ArgumentList 'run', 'start' `
-    -WorkingDirectory $Root -PassThru -WindowStyle Minimized
+  $server = Start-Process -FilePath 'npm.cmd' -ArgumentList 'run start' `
+    -WorkingDirectory $Root -PassThru -WindowStyle Hidden `
+    -RedirectStandardOutput $serverLog -RedirectStandardError $serverErr
 }
 
 $ready = $false
-for ($i = 0; $i -lt 50; $i++) {
+for ($i = 0; $i -lt 60; $i++) {
+  Start-Sleep -Seconds 1
+  if ($server.HasExited) {
+    Write-Host ('  ERROR: el servidor salio (codigo ' + $server.ExitCode + ').')
+    Write-Host '  --- server-err.txt ---'
+    if (Test-Path $serverErr) { Get-Content $serverErr -ErrorAction SilentlyContinue | Select-Object -Last 40 | ForEach-Object { Write-Host $_ } }
+    Write-Host '  --- server-log.txt ---'
+    if (Test-Path $serverLog) { Get-Content $serverLog -ErrorAction SilentlyContinue | Select-Object -Last 40 | ForEach-Object { Write-Host $_ } }
+    exit 1
+  }
+  if (($i % 5) -eq 0) {
+    Write-Host ("  esperando respuesta en :3000 ... {0}s" -f $i)
+  }
   try {
     $r = Invoke-WebRequest -Uri 'http://127.0.0.1:3000/' -UseBasicParsing -TimeoutSec 2
     if ($r.StatusCode -eq 200) { $ready = $true; break }
   } catch { }
-  Start-Sleep -Seconds 1
 }
 if (-not $ready) {
   Write-Host '  ERROR: el servidor no respondio en :3000'
+  Write-Host '  Mira server-log.txt / server-err.txt'
+  if (Test-Path $serverErr) { Get-Content $serverErr -ErrorAction SilentlyContinue | Select-Object -Last 30 | ForEach-Object { Write-Host $_ } }
   exit 1
 }
 Write-Host '  Servidor OK'
