@@ -1,7 +1,7 @@
 # Inicia / reinicia Panaderia Lela:
 #  - instala Git/Node si faltan
 #  - git pull desde GitHub (preserva data/)
-#  - npm install + build
+#  - npm install (sin node-gyp; usa prebuilds) + build
 #  - servidor :3000 + tunel Cloudflare
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -9,6 +9,8 @@ Set-Location $Root
 
 $RepoUrl = 'https://github.com/Rangulo160503/Lela.git'
 $Branch = 'main'
+$PortableNodeVer = 'v22.23.5'
+$MinNodeVer = [version]'22.22.0'
 
 $urlFile = Join-Path $Root 'tunel-url.txt'
 $logFile = Join-Path $Root 'tunel-log.txt'
@@ -36,6 +38,30 @@ function Stop-LelaAll {
   Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
 }
 
+function Invoke-Git {
+  param([Parameter(Mandatory = $true)][string[]]$GitArgs)
+  # Evita que stderr de git (hints / "No such remote") tumbe el script con Stop
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  $output = & git @GitArgs 2>&1
+  $code = $LASTEXITCODE
+  $ErrorActionPreference = $prev
+  foreach ($line in $output) {
+    $text = "$line"
+    if (-not $text) { continue }
+    if ($text -match '^(hint|warning):') { continue }
+    Write-Host ("  git: " + $text)
+  }
+  return $code
+}
+
+function Get-NodeVersionObject([string]$VersionText) {
+  if ($VersionText -match 'v?(\d+)\.(\d+)\.(\d+)') {
+    return [version]"$($Matches[1]).$($Matches[2]).$($Matches[3])"
+  }
+  return [version]'0.0.0'
+}
+
 function Ensure-Git {
   $sysGit = Get-Command git -ErrorAction SilentlyContinue
   if ($sysGit) {
@@ -57,7 +83,6 @@ function Ensure-Git {
   Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
   if (Test-Path $minGitDir) { Remove-Item $minGitDir -Recurse -Force }
   Expand-Archive -Path $zipPath -DestinationPath $minGitDir -Force
-  # MinGit zip a veces mete una carpeta intermedia
   if (-not (Test-Path $portableGit)) {
     $inner = Get-ChildItem $minGitDir -Directory | Select-Object -First 1
     if ($inner -and (Test-Path (Join-Path $inner.FullName 'cmd\git.exe'))) {
@@ -75,6 +100,19 @@ function Ensure-Git {
   Write-Host ('  Git portable listo: ' + (& git --version))
 }
 
+function Ensure-GitRemote {
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  $remotes = @(& git remote 2>$null)
+  $ErrorActionPreference = $prev
+  if ($remotes -contains 'origin') {
+    $null = Invoke-Git @('remote', 'set-url', 'origin', $RepoUrl)
+  } else {
+    $code = Invoke-Git @('remote', 'add', 'origin', $RepoUrl)
+    if ($code -ne 0) { throw 'No se pudo agregar remote origin.' }
+  }
+}
+
 function Update-FromGitHub {
   $env:GIT_TERMINAL_PROMPT = '0'
   Write-Host '  Actualizando codigo desde GitHub...'
@@ -89,34 +127,27 @@ function Update-FromGitHub {
   try {
     if (-not (Test-Path (Join-Path $Root '.git'))) {
       Write-Host '  Carpeta sin git: vinculando con el repo...'
-      & git init | Out-Null
-      & git remote remove origin 2>$null | Out-Null
-      & git remote add origin $RepoUrl
-    } else {
-      $existing = ''
-      try { $existing = (& git remote get-url origin 2>$null) } catch { $existing = '' }
-      if (-not $existing) {
-        & git remote add origin $RepoUrl
-      } elseif ($existing -ne $RepoUrl) {
-        & git remote set-url origin $RepoUrl
-      }
+      $code = Invoke-Git @('init', '-b', $Branch)
+      if ($code -ne 0) { throw 'git init fallo.' }
     }
 
-    & git fetch --prune origin $Branch
-    if ($LASTEXITCODE -ne 0) {
+    Ensure-GitRemote
+
+    $code = Invoke-Git @('fetch', '--prune', 'origin', $Branch)
+    if ($code -ne 0) {
       throw 'git fetch fallo (revisa Internet / acceso a GitHub).'
     }
 
-    & git checkout -B $Branch "origin/$Branch"
-    if ($LASTEXITCODE -ne 0) {
-      throw 'git checkout fallo.'
-    }
-    & git reset --hard "origin/$Branch"
-    if ($LASTEXITCODE -ne 0) {
-      throw 'git reset --hard fallo.'
-    }
+    $code = Invoke-Git @('checkout', '-B', $Branch, "origin/$Branch")
+    if ($code -ne 0) { throw 'git checkout fallo.' }
 
-    $head = (& git rev-parse --short HEAD)
+    $code = Invoke-Git @('reset', '--hard', "origin/$Branch")
+    if ($code -ne 0) { throw 'git reset --hard fallo.' }
+
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $head = (& git rev-parse --short HEAD 2>$null)
+    $ErrorActionPreference = $prev
     Write-Host ("  Codigo actualizado: $head (origin/$Branch)")
   } finally {
     Pop-Location
@@ -130,21 +161,10 @@ function Update-FromGitHub {
   }
 }
 
-function Ensure-Node {
-  $sysNode = Get-Command node -ErrorAction SilentlyContinue
-  if ($sysNode) {
-    Write-Host ('  Node del sistema: ' + (& node -v))
-    return @{ Mode = 'system' }
-  }
-  if (Test-Path $nodeExe) {
-    Write-Host ('  Node portable: ' + (& $nodeExe -v))
-    $env:Path = "$runtimeDir;$env:Path"
-    return @{ Mode = 'portable' }
-  }
-
-  Write-Host '  Descargando Node.js portable (solo la primera vez)...'
+function Install-PortableNode {
+  Write-Host ("  Descargando Node.js portable $PortableNodeVer...")
   New-Item -ItemType Directory -Force -Path $runtimeDir | Out-Null
-  $ver = 'v22.14.0'
+  $ver = $PortableNodeVer
   $zipUrl = "https://nodejs.org/dist/$ver/node-$ver-win-x64.zip"
   $zipPath = Join-Path $env:TEMP "node-$ver-win-x64.zip"
   $extract = Join-Path $env:TEMP "node-$ver-win-x64"
@@ -154,9 +174,35 @@ function Ensure-Node {
   Copy-Item (Join-Path $extract 'node.exe') $nodeExe -Force
   Copy-Item (Join-Path $extract 'npm.cmd') $npmCmd -Force -ErrorAction SilentlyContinue
   Copy-Item (Join-Path $extract 'npx.cmd') (Join-Path $runtimeDir 'npx.cmd') -Force -ErrorAction SilentlyContinue
-  Copy-Item (Join-Path $extract 'node_modules') (Join-Path $runtimeDir 'node_modules') -Recurse -Force -ErrorAction SilentlyContinue
+  $runtimeNpmModules = Join-Path $runtimeDir 'node_modules'
+  if (Test-Path $runtimeNpmModules) { Remove-Item $runtimeNpmModules -Recurse -Force -ErrorAction SilentlyContinue }
+  Copy-Item (Join-Path $extract 'node_modules') $runtimeNpmModules -Recurse -Force -ErrorAction SilentlyContinue
   Write-Host ('  Node portable listo: ' + (& $nodeExe -v))
   $env:Path = "$runtimeDir;$env:Path"
+}
+
+function Ensure-Node {
+  $sysNode = Get-Command node -ErrorAction SilentlyContinue
+  if ($sysNode) {
+    $sysVer = Get-NodeVersionObject (& node -v)
+    if ($sysVer -ge $MinNodeVer) {
+      Write-Host ('  Node del sistema: ' + (& node -v))
+      return @{ Mode = 'system' }
+    }
+    Write-Host ("  Node del sistema ($sysVer) es viejo; se usara portable >= $MinNodeVer")
+  }
+
+  if (Test-Path $nodeExe) {
+    $portVer = Get-NodeVersionObject (& $nodeExe -v)
+    if ($portVer -ge $MinNodeVer) {
+      Write-Host ('  Node portable: ' + (& $nodeExe -v))
+      $env:Path = "$runtimeDir;$env:Path"
+      return @{ Mode = 'portable' }
+    }
+    Write-Host ("  Node portable ($portVer) es viejo; actualizando...")
+  }
+
+  Install-PortableNode
   return @{ Mode = 'portable' }
 }
 
@@ -169,6 +215,44 @@ function Invoke-Npm {
   }
   if ($LASTEXITCODE -ne 0) {
     throw "npm fallo: $($NpmArgs -join ' ')"
+  }
+}
+
+function Install-Dependencies {
+  # better-sqlite3 v13 trae prebuilds; npm 10 en Windows aun intenta node-gyp
+  # si ve binding.gyp. --ignore-scripts evita Python/VS Build Tools.
+  $nm = Join-Path $Root 'node_modules'
+  $sqlitePre = Join-Path $nm 'better-sqlite3\prebuilds\win32-x64.node'
+  $tsxOk = Join-Path $nm 'tsx\dist\cli.mjs'
+  $esbuildWin = Join-Path $nm '@esbuild\win32-x64\esbuild.exe'
+
+  $needsClean = $false
+  if ((Test-Path $nm) -and (-not (Test-Path $sqlitePre) -or -not (Test-Path $tsxOk))) {
+    $needsClean = $true
+  }
+  if ($needsClean) {
+    Write-Host '  Limpiando node_modules incompleto (instalacion previa fallida)...'
+    Remove-Item $nm -Recurse -Force -ErrorAction SilentlyContinue
+  }
+
+  Write-Host '  npm install --ignore-scripts (usa binarios precompilados)...'
+  Invoke-Npm 'install', '--ignore-scripts'
+
+  if (-not (Test-Path $sqlitePre)) {
+    throw 'Falta prebuild better-sqlite3 (win32-x64). Revisa Internet / antivirus.'
+  }
+
+  # esbuild: el optional @esbuild/win32-x64 basta; si no, corre install.js
+  if (-not (Test-Path $esbuildWin)) {
+    $esbuildInstall = Join-Path $nm 'esbuild\install.js'
+    if (Test-Path $esbuildInstall) {
+      Write-Host '  Completando binario esbuild...'
+      if (Test-Path $nodeExe) {
+        & $nodeExe $esbuildInstall
+      } else {
+        & node $esbuildInstall
+      }
+    }
   }
 }
 
@@ -212,8 +296,8 @@ try {
 Write-Host '  4) Comprobando Node.js...'
 $null = Ensure-Node
 
-Write-Host '  5) Dependencias (npm install)...'
-Invoke-Npm 'install'
+Write-Host '  5) Dependencias...'
+Install-Dependencies
 
 Write-Host '  6) UI React (build)...'
 Invoke-Npm 'run', 'build:web'

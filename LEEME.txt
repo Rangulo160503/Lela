@@ -24,7 +24,13 @@ OPCION B — Descargar desde GitHub
 1) En https://github.com/Rangulo160503/Lela
    Code → Download ZIP → extraer.
 2) Ejecutar Iniciar.bat (igual que arriba).
-   La primera vez necesita Internet (Node + npm install + tunel).
+   La primera vez necesita Internet (Git/Node + npm + tunel).
+   No hace falta Python ni Visual Studio: usa binarios precompilados.
+
+Si Iniciar fallo a medias (npm / Python / remote origin):
+  - Borrar la carpeta node_modules
+  - Volver a ejecutar Iniciar.bat (se limpia solo y reintenta)
+  - O descargar de nuevo el ZIP y copiar encima, sin tocar data\
 
 USUARIOS INICIALES
 ------------------
