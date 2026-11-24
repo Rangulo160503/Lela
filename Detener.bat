@@ -1,14 +1,12 @@
 @echo off
 setlocal
+cd /d "%~dp0"
+title Panaderia Lela - Detener
 echo.
-echo  Cerrando procesos de Panaderia Lela en el puerto 3000...
+echo  Apagando Panaderia Lela (servidor + tunel)...
 echo.
-
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING"') do (
-  echo  Terminando PID %%a
-  taskkill /PID %%a /F >nul 2>&1
-)
-
-echo  Listo. Puedes cerrar esta ventana.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\stop-lela.ps1"
+echo.
+echo  Listo. Ya puedes cerrar esta ventana.
 pause
 endlocal

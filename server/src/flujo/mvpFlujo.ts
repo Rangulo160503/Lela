@@ -236,7 +236,8 @@ export function createMvpFlujo(deps: {
     listRawMaterials() {
       return deps.db
         .prepare(
-          `SELECT id, name, unit, stock, avg_cost as avgCost, active
+          `SELECT id, name, unit, stock, avg_cost as avgCost, active, photo_path as photoPath,
+                  pack_size_kg as packSizeKg, pack_price as packPrice
            FROM raw_materials ORDER BY name COLLATE NOCASE`,
         )
         .all()
@@ -248,46 +249,103 @@ export function createMvpFlujo(deps: {
       unit: string
       stock?: number
       avgCost?: number
+      packSizeKg?: number
+      packPrice?: number
       active?: boolean
+      photoPath?: string | null
     }) {
       const id = input.id ?? randomUUID()
       const now = new Date().toISOString()
-      const exists = deps.db.prepare(`SELECT id FROM raw_materials WHERE id=?`).get(id)
-      if (exists) {
+      const existing = deps.db
+        .prepare(
+          `SELECT pack_size_kg as packSizeKg, pack_price as packPrice, avg_cost as avgCost
+           FROM raw_materials WHERE id=?`,
+        )
+        .get(id) as
+        | { packSizeKg: number; packPrice: number; avgCost: number }
+        | undefined
+
+      const packSizeKg =
+        typeof input.packSizeKg === 'number' && input.packSizeKg > 0
+          ? input.packSizeKg
+          : existing?.packSizeKg && existing.packSizeKg > 0
+            ? existing.packSizeKg
+            : 1
+
+      let packPrice =
+        typeof input.packPrice === 'number' && input.packPrice >= 0
+          ? input.packPrice
+          : (existing?.packPrice ?? 0)
+
+      let avgCost =
+        typeof input.avgCost === 'number' && input.avgCost >= 0
+          ? input.avgCost
+          : (existing?.avgCost ?? 0)
+
+      // Si mandan saco (tamaño + precio), ₡/kg = precio ÷ kg
+      if (
+        typeof input.packSizeKg === 'number' &&
+        input.packSizeKg > 0 &&
+        typeof input.packPrice === 'number' &&
+        input.packPrice >= 0
+      ) {
+        packPrice = input.packPrice
+        avgCost = input.packPrice / input.packSizeKg
+      } else if (
+        typeof input.avgCost === 'number' &&
+        input.avgCost >= 0 &&
+        packSizeKg > 0
+      ) {
+        // Ajuste de ₡/kg (p. ej. desde receta): mantener saco y recalcular precio del paquete
+        avgCost = input.avgCost
+        packPrice = input.avgCost * packSizeKg
+      }
+
+      if (existing) {
         deps.db.prepare(
-          `UPDATE raw_materials SET name=?, unit=?, stock=COALESCE(?, stock), avg_cost=COALESCE(?, avg_cost),
-            active=?, updated_at=? WHERE id=?`,
+          `UPDATE raw_materials SET name=?, unit=?, stock=COALESCE(?, stock), avg_cost=?,
+            pack_size_kg=?, pack_price=?, active=?, photo_path=COALESCE(?, photo_path), updated_at=?
+           WHERE id=?`,
         ).run(
           input.name,
           input.unit,
           input.stock ?? null,
-          input.avgCost ?? null,
+          avgCost,
+          packSizeKg,
+          packPrice,
           input.active === false ? 0 : 1,
+          input.photoPath ?? null,
           now,
           id,
         )
       } else {
         deps.db.prepare(
-          `INSERT INTO raw_materials (id, name, unit, stock, avg_cost, active, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO raw_materials
+            (id, name, unit, stock, avg_cost, active, updated_at, photo_path, pack_size_kg, pack_price)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).run(
           id,
           input.name,
           input.unit,
           input.stock ?? 0,
-          input.avgCost ?? 0,
+          avgCost,
           input.active === false ? 0 : 1,
           now,
+          input.photoPath ?? null,
+          packSizeKg,
+          packPrice,
         )
       }
       notify()
-      return { ok: true as const, id }
+      return { ok: true as const, id, avgCost, packSizeKg, packPrice }
     },
 
     listRecipes() {
       const recipes = deps.db
         .prepare(
-          `SELECT id, product_id as productId, name, version, official, active, created_at as createdAt, notes
+          `SELECT id, product_id as productId, name, version, official, active,
+                  created_at as createdAt, notes, photo_path as photoPath,
+                  batch_yield as batchYield
            FROM recipes ORDER BY name COLLATE NOCASE, version DESC`,
         )
         .all() as Array<{ id: string }>
@@ -306,10 +364,17 @@ export function createMvpFlujo(deps: {
       productId: string
       name: string
       notes?: string
+      photoPath?: string | null
+      batchYield?: number
       official?: boolean
+      active?: boolean
       ingredients: { rawMaterialId: string; quantity: number }[]
     }) {
       const id = input.id ?? randomUUID()
+      const batchYield =
+        typeof input.batchYield === 'number' && input.batchYield > 0
+          ? input.batchYield
+          : 1
       const versionRow = deps.db
         .prepare(
           `SELECT COALESCE(MAX(version),0) as v FROM recipes WHERE product_id=?`,
@@ -325,24 +390,31 @@ export function createMvpFlujo(deps: {
       const tx = deps.db.transaction(() => {
         if (!input.id) {
           deps.db.prepare(
-            `INSERT INTO recipes (id, product_id, name, version, official, active, created_at, notes)
-             VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+            `INSERT INTO recipes (id, product_id, name, version, official, active, created_at, notes, photo_path, batch_yield)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           ).run(
             id,
             input.productId,
             input.name,
             version,
             input.official === false ? 0 : 1,
+            input.active === false ? 0 : 1,
             new Date().toISOString(),
             input.notes ?? '',
+            input.photoPath ?? null,
+            batchYield,
           )
         } else {
           deps.db.prepare(
-            `UPDATE recipes SET name=?, official=?, notes=? WHERE id=?`,
+            `UPDATE recipes SET name=?, official=?, notes=?, photo_path=COALESCE(?, photo_path),
+              active=?, batch_yield=? WHERE id=?`,
           ).run(
             input.name,
             input.official === false ? 0 : 1,
             input.notes ?? '',
+            input.photoPath ?? null,
+            input.active === false ? 0 : 1,
+            batchYield,
             id,
           )
           deps.db.prepare(`DELETE FROM recipe_ingredients WHERE recipe_id=?`).run(id)
@@ -351,6 +423,7 @@ export function createMvpFlujo(deps: {
           `INSERT INTO recipe_ingredients (recipe_id, raw_material_id, quantity) VALUES (?, ?, ?)`,
         )
         for (const ing of input.ingredients) {
+          if (!ing.rawMaterialId) continue
           ins.run(id, ing.rawMaterialId, ing.quantity)
         }
       })
@@ -423,13 +496,21 @@ export function createMvpFlujo(deps: {
             )
             .get(line.productId) as { id: string } | undefined
           if (recipe && line.qty > 0) {
+            const recipeMeta = deps.db
+              .prepare(`SELECT batch_yield as batchYield FROM recipes WHERE id=?`)
+              .get(recipe.id) as { batchYield: number } | undefined
+            const batchYield =
+              recipeMeta && recipeMeta.batchYield > 0 ? recipeMeta.batchYield : 1
+            // quantity = % panadero sobre 1 kg de base (100% = 1 kg).
+            // Por cada unidad terminada: kg = (%/100) / batch_yield
             const ings = deps.db
               .prepare(
                 `SELECT raw_material_id as rawMaterialId, quantity FROM recipe_ingredients WHERE recipe_id=?`,
               )
               .all(recipe.id) as { rawMaterialId: string; quantity: number }[]
             for (const ing of ings) {
-              const consume = ing.quantity * line.qty
+              const kgPerUnit = ing.quantity / 100 / batchYield
+              const consume = kgPerUnit * line.qty
               deps.db.prepare(
                 `UPDATE raw_materials SET stock = MAX(0, stock - ?), updated_at=? WHERE id=?`,
               ).run(consume, new Date().toISOString(), ing.rawMaterialId)
@@ -1401,7 +1482,8 @@ export function createMvpFlujo(deps: {
     listPromos() {
       const promos = deps.db
         .prepare(
-          `SELECT id, name, kind, price, active, created_at as createdAt FROM promos ORDER BY name`,
+          `SELECT id, name, kind, price, active, photo_path as photoPath, created_at as createdAt
+           FROM promos ORDER BY name`,
         )
         .all() as Array<{ id: string }>
       return promos.map((p) => ({
@@ -1420,6 +1502,7 @@ export function createMvpFlujo(deps: {
       kind: 'promo' | 'combo'
       price: number
       active?: boolean
+      photoPath?: string | null
       components: { productId: string; quantity: number; substitutable?: boolean }[]
     }) {
       const id = input.id ?? randomUUID()
@@ -1427,19 +1510,27 @@ export function createMvpFlujo(deps: {
         const exists = deps.db.prepare(`SELECT id FROM promos WHERE id=?`).get(id)
         if (exists) {
           deps.db.prepare(
-            `UPDATE promos SET name=?, kind=?, price=?, active=? WHERE id=?`,
+            `UPDATE promos SET name=?, kind=?, price=?, active=?, photo_path=COALESCE(?, photo_path) WHERE id=?`,
           ).run(
             input.name,
             input.kind,
             input.price,
             input.active === false ? 0 : 1,
+            input.photoPath ?? null,
             id,
           )
           deps.db.prepare(`DELETE FROM promo_components WHERE promo_id=?`).run(id)
         } else {
           deps.db.prepare(
-            `INSERT INTO promos (id, name, kind, price, active, created_at) VALUES (?, ?, ?, ?, 1, ?)`,
-          ).run(id, input.name, input.kind, input.price, new Date().toISOString())
+            `INSERT INTO promos (id, name, kind, price, active, created_at, photo_path) VALUES (?, ?, ?, ?, 1, ?, ?)`,
+          ).run(
+            id,
+            input.name,
+            input.kind,
+            input.price,
+            new Date().toISOString(),
+            input.photoPath ?? null,
+          )
         }
         const ins = deps.db.prepare(
           `INSERT INTO promo_components (promo_id, product_id, quantity, substitutable) VALUES (?, ?, ?, ?)`,

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { SoftToast } from '../components/SoftToast'
 import { apiGet, apiPost } from '../data/api'
 import { useInventory } from '../features/inventario/InventoryContext'
 import { formatMoney } from '../domain/buildProforma'
@@ -19,6 +20,14 @@ export function TurnosPage() {
   const [expense, setExpense] = useState({ description: '', amount: 0, accountId: 'acc-efectivo' })
   const [showExpense, setShowExpense] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [toastTone, setToastTone] = useState<'ok' | 'warn' | 'error'>('ok')
+  const dismissToast = useCallback(() => setMsg(null), [])
+  const notify = useCallback((text: string, tone: 'ok' | 'warn' | 'error' = 'ok') => {
+    let next: 'ok' | 'warn' | 'error' = tone
+    if (/error|no se pudo|falló/i.test(text)) next = 'error'
+    setToastTone(next)
+    setMsg(text)
+  }, [])
 
   async function load() {
     const t = await apiGet<{ ok: true; items: { id: string; name: string }[] }>(
@@ -62,7 +71,7 @@ export function TurnosPage() {
         </div>
       </header>
 
-      {msg ? <p className="login-form__error">{msg}</p> : null}
+      <SoftToast message={msg} tone={toastTone} onDismiss={dismissToast} />
 
       <div className="turno-balance">
         {accounts.map((a) => (
@@ -92,7 +101,10 @@ export function TurnosPage() {
                         '/shifts/open',
                         { templateId: t.id },
                       )
-                      setMsg(r.ok ? `Turno ${t.name} abierto` : r.error ?? 'Error')
+                      notify(
+                        r.ok ? `Turno ${t.name} abierto` : r.error ?? 'Error',
+                        r.ok ? 'ok' : 'error',
+                      )
                       void load()
                     }}
                   >
@@ -138,7 +150,7 @@ export function TurnosPage() {
                     className="btn btn--secondary"
                     onClick={async () => {
                       await apiPost('/expenses', expense)
-                      setMsg('Gasto registrado')
+                      notify('Gasto registrado')
                       setShowExpense(false)
                       setExpense({ description: '', amount: 0, accountId: 'acc-efectivo' })
                       void load()
@@ -224,10 +236,11 @@ export function TurnosPage() {
                       notes: '',
                     },
                   )
-                  setMsg(
+                  notify(
                     r.ok
                       ? `Cierre guardado. Diferencias reportadas: ${r.differences ?? 0}`
                       : 'No se pudo cerrar',
+                    r.ok ? 'ok' : 'error',
                   )
                   void load()
                   void refresh()

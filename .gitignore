@@ -14,12 +14,17 @@ dist-ssr
 data/*.sqlite
 data/*.sqlite-*
 data/backups/
+data/uploads/**
+!data/uploads/.keep
 data/legacy-imported.json
 runtime/
 portable-stage/
 Panaderia-Lela.zip
 *.pid
 server.pid
+tunel-url.txt
+tunel-log.txt
+tunel.pid
 
 # Editor directories and files
 .vscode/*

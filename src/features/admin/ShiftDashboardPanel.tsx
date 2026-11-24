@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { SoftToast } from '../../components/SoftToast'
 import { apiGet } from '../../data/api'
 import { formatMoney } from '../../domain/buildProforma'
 
@@ -68,6 +69,7 @@ export function ShiftDashboardPanel({ productNames = {} }: ShiftDashboardPanelPr
   const [selectedId, setSelectedId] = useState('')
   const [summary, setSummary] = useState<ShiftSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const dismissError = useCallback(() => setError(null), [])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -189,7 +191,7 @@ export function ShiftDashboardPanel({ productNames = {} }: ShiftDashboardPanelPr
         )}
       </div>
 
-      {error ? <p className="login-form__error">{error}</p> : null}
+      <SoftToast message={error} tone="error" onDismiss={dismissError} />
       {loading ? <p className="page__hint">Cargando resumen…</p> : null}
 
       {summary && !loading ? (

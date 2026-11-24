@@ -1,36 +1,42 @@
 PANADERIA LELA — INSTRUCCIONES
 ===============================
 
-1) Extraiga esta carpeta en la COMPUTADORA PRINCIPAL.
-2) Ejecute Iniciar.bat y deje la ventana abierta.
-3) Abra el navegador en:  http://127.0.0.1:3000
-4) Otros dispositivos (misma Wi-Fi):
-   http://IP-DE-LA-PC:3000
-   (la IP aparece en la ventana al iniciar)
+OPCION A — ZIP / carpeta en la PC de la panaderia
+-------------------------------------------------
+1) Extraiga la carpeta en la COMPUTADORA PRINCIPAL
+   (ej. C:\Panaderia-Lela).
+2) Doble clic en:  Iniciar.bat
+   - La primera vez instala Node (si falta), dependencias y arma la UI.
+   - Reinicia si ya estaba corriendo.
+   - Abre un link publico (tunel) y deja la ventana abierta.
+3) Use ese link en iPad / celular / otra PC.
+   En esta PC tambien: http://127.0.0.1:3000
+4) Para apagar:  Detener.bat
 
-5) Para apagar el sistema: Detener.bat
+Solo hay DOS botones:
+  Iniciar.bat  = encender / reiniciar / tunel
+  Detener.bat  = apagar todo
+
+OPCION B — Descargar desde GitHub
+---------------------------------
+1) En https://github.com/Rangulo160503/Lela
+   Code → Download ZIP → extraer.
+2) Ejecutar Iniciar.bat (igual que arriba).
+   La primera vez necesita Internet (Node + npm install + tunel).
 
 USUARIOS INICIALES
 ------------------
-  admin    / 1234   (administrador)
-  empleado / 0000   (operacion diaria)
-
-Cambie los PIN en Administracion > Usuarios.
+  admin    / 1234
+  empleado / 0000
 
 DATOS
 -----
-  Base de datos: data\panaderia-lela.sqlite
-  Respaldos:     data\backups\
+  Base:     data\panaderia-lela.sqlite
+  Respaldos: data\backups\
+  Fotos:    data\uploads\
 
-IMPRESORA
----------
-  Configure en Admin > Impresora el nombre Windows
-  de la Epson TM-U220 instalada en la PC principal.
-
-FIREWALL
---------
-  Si el celular no conecta, permita Node.js en el
-  Firewall de Windows (red privada).
-
-No se necesita Internet ni instalar programas.
-Detalle completo: INFORME-MVP.md y README.md
+NOTAS
+-----
+- El link trycloudflare.com CAMBIA cada vez que reinicia el tunel.
+- Para dominio fijo (ej. app.tudominio.com) se configura despues.
+- iPad 4 / iOS 9 usa automaticamente la version lite.

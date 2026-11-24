@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/AuthContext'
+import { SoftToast } from '../components/SoftToast'
 import { apiGet, apiPost, fetchSnapshot } from '../data/api'
 import { AdminNav } from '../features/admin/AdminNav'
 import {
@@ -15,6 +16,7 @@ import {
 import { BackupsPanel } from '../features/admin/BackupsPanel'
 import { CierrePanel } from '../features/admin/CierrePanel'
 import { MaterialsPanel } from '../features/admin/MaterialsPanel'
+import { PhotosPanel } from '../features/admin/PhotosPanel'
 import { PrinterPanel } from '../features/admin/PrinterPanel'
 import { ProductsPanel } from '../features/admin/ProductsPanel'
 import { PromosPanel } from '../features/admin/PromosPanel'
@@ -55,6 +57,15 @@ export function AdminPage() {
   const [paperChars, setPaperChars] = useState(40)
   const [printerHint, setPrinterHint] = useState('')
   const [message, setMessage] = useState<string | null>(null)
+  const [toastTone, setToastTone] = useState<'ok' | 'warn' | 'error'>('ok')
+  const dismissToast = useCallback(() => setMessage(null), [])
+  const notify = useCallback((msg: string, tone: 'ok' | 'warn' | 'error' = 'ok') => {
+    let next: 'ok' | 'warn' | 'error' = tone
+    if (/error|no se pudo|falló|falta|requerid/i.test(msg)) next = 'error'
+    else if (/revisá|sin match|elegí|poné/i.test(msg)) next = 'warn'
+    setToastTone(next)
+    setMessage(msg)
+  }, [])
   const [openShift, setOpenShift] = useState<{
     id: string
     businessDate: string
@@ -162,7 +173,7 @@ export function AdminPage() {
         setPrinterHint(pr.hint)
       }
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Error al cargar')
+      notify(err instanceof Error ? err.message : 'No se pudo cargar', 'error')
     }
   }
 
@@ -199,9 +210,13 @@ export function AdminPage() {
         </div>
       </header>
 
-      {message ? <p className="login-form__error">{message}</p> : null}
+      <SoftToast message={message} tone={toastTone} onDismiss={dismissToast} />
 
-      <div className="admin-layout">
+      <div
+        className={
+          area === 'config' ? 'admin-layout' : 'admin-layout admin-layout--solo'
+        }
+      >
         <AdminNav tab={tab} onNavigate={(path) => navigate(path)} />
 
         <div className="admin-main">
@@ -217,7 +232,7 @@ export function AdminPage() {
               }
               accounts={accounts}
               onSaved={() => void refresh()}
-              onMessage={setMessage}
+              onMessage={notify}
             />
           ) : null}
 
@@ -239,7 +254,7 @@ export function AdminPage() {
                 }[]
               }
               onSaved={() => void refresh()}
-              onMessage={setMessage}
+              onMessage={notify}
             />
           ) : null}
 
@@ -251,37 +266,92 @@ export function AdminPage() {
                   name: string
                   unit: string
                   stock: number
+                  avgCost?: number
+                  packSizeKg?: number
+                  packPrice?: number
+                  active?: number | boolean
+                  photoPath?: string | null
                 }[]
               }
               onSaved={() => void refresh()}
+              onMessage={notify}
             />
           ) : null}
 
           {tab === 'recipes' ? (
             <RecipesPanel
               recipes={
-                recipes as { id: string; name: string; version: number }[]
+                recipes as {
+                  id: string
+                  name: string
+                  version: number
+                  productId?: string
+                  notes?: string
+                  photoPath?: string | null
+                  batchYield?: number
+                  active?: number | boolean
+                  ingredients?: { rawMaterialId: string; quantity: number }[]
+                }[]
               }
-              products={products as { id: string; name: string }[]}
-              materials={materials as { id: string; name: string }[]}
+              products={
+                products as {
+                  id: string
+                  name: string
+                  unitPrice?: number
+                }[]
+              }
+              materials={
+                materials as {
+                  id: string
+                  name: string
+                  unit?: string
+                  avgCost?: number
+                  packSizeKg?: number
+                  packPrice?: number
+                  active?: number | boolean
+                }[]
+              }
               onSaved={() => void refresh()}
+              onMessage={notify}
             />
           ) : null}
 
           {tab === 'promos' ? (
             <PromosPanel
-              promos={promos as { id: string; name: string; price: number }[]}
+              promos={
+                promos as {
+                  id: string
+                  name: string
+                  price: number
+                  active?: number | boolean
+                  photoPath?: string | null
+                  components?: {
+                    productId: string
+                    quantity: number
+                    substitutable?: number | boolean
+                  }[]
+                }[]
+              }
               products={products as { id: string; name: string }[]}
               onSaved={() => void refresh()}
+              onMessage={notify}
             />
           ) : null}
+
+          {tab === 'photos' ? <PhotosPanel onMessage={notify} /> : null}
 
           {tab === 'suppliers' ? (
             <SuppliersPanel
               suppliers={
-                suppliers as { id: string; name: string; phone: string }[]
+                suppliers as {
+                  id: string
+                  name: string
+                  phone: string
+                  active?: number | boolean
+                }[]
               }
               onSaved={() => void refresh()}
+              onMessage={notify}
             />
           ) : null}
 
@@ -317,7 +387,7 @@ export function AdminPage() {
               onPaperChars={setPaperChars}
               onSave={async () => {
                 await apiPost('/printer', { printerName, paperChars })
-                setMessage('Impresora guardada')
+                notify('Impresora guardada')
               }}
             />
           ) : null}
@@ -326,7 +396,7 @@ export function AdminPage() {
             <BackupsPanel
               backups={backups}
               onSaved={() => void refresh()}
-              onMessage={setMessage}
+              onMessage={notify}
             />
           ) : null}
         </div>

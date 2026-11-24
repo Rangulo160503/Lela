@@ -10,7 +10,7 @@ type PhotoCaptureFieldProps = {
   label?: string
 }
 
-/** Cámara / galería → upload local. Sin biblioteca de stock. */
+/** Preview como control: vacío = subir; con foto = capa Cambiar / Quitar. */
 export function PhotoCaptureField({
   value,
   onChange,
@@ -18,8 +18,7 @@ export function PhotoCaptureField({
   kind = 'expense',
   label = 'Foto',
 }: PhotoCaptureFieldProps) {
-  const cameraRef = useRef<HTMLInputElement>(null)
-  const galleryRef = useRef<HTMLInputElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
 
   async function handleFile(file: File | undefined) {
@@ -39,8 +38,7 @@ export function PhotoCaptureField({
       onError?.(err instanceof Error ? err.message : 'No se pudo usar la foto')
     } finally {
       setBusy(false)
-      if (cameraRef.current) cameraRef.current.value = ''
-      if (galleryRef.current) galleryRef.current.value = ''
+      if (fileRef.current) fileRef.current.value = ''
     }
   }
 
@@ -48,51 +46,57 @@ export function PhotoCaptureField({
     <fieldset className="photo-field">
       <legend className="field__label">{label}</legend>
 
-      <div
-        className="photo-field__preview"
-        style={{ backgroundImage: value ? `url(${value})` : undefined }}
-        aria-hidden="true"
-      />
-
-      <div className="photo-field__actions">
+      {!value ? (
         <button
           type="button"
-          className="btn btn--primary"
+          className="photo-field__stage photo-field__stage--empty"
           disabled={busy}
-          onClick={() => cameraRef.current?.click()}
+          onClick={() => fileRef.current?.click()}
+          aria-label="Subir foto"
         >
-          {busy ? 'Subiendo…' : 'Tomar foto'}
+          <span className="photo-field__placeholder">
+            {busy ? 'Subiendo…' : 'Subir foto'}
+          </span>
+          <span className="photo-field__sub">
+            Tocá para elegir del teléfono o la PC
+          </span>
         </button>
-        <button
-          type="button"
-          className="btn btn--secondary"
-          disabled={busy}
-          onClick={() => galleryRef.current?.click()}
+      ) : (
+        <div
+          className={
+            busy
+              ? 'photo-field__stage photo-field__stage--filled photo-field__stage--busy'
+              : 'photo-field__stage photo-field__stage--filled'
+          }
         >
-          Galería
-        </button>
-        {value ? (
-          <button
-            type="button"
-            className="btn btn--ghost"
-            disabled={busy}
-            onClick={() => onChange('')}
-          >
-            Quitar
-          </button>
-        ) : null}
-      </div>
+          <div
+            className="photo-field__media"
+            style={{ backgroundImage: `url(${value})` }}
+            aria-hidden="true"
+          />
+          <div className="photo-field__veil">
+            <button
+              type="button"
+              className="photo-field__chip"
+              disabled={busy}
+              onClick={() => fileRef.current?.click()}
+            >
+              {busy ? 'Subiendo…' : 'Cambiar'}
+            </button>
+            <button
+              type="button"
+              className="photo-field__chip photo-field__chip--danger"
+              disabled={busy}
+              onClick={() => onChange('')}
+            >
+              Quitar
+            </button>
+          </div>
+        </div>
+      )}
 
       <input
-        ref={cameraRef}
-        className="visually-hidden"
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={(e) => void handleFile(e.target.files?.[0])}
-      />
-      <input
-        ref={galleryRef}
+        ref={fileRef}
         className="visually-hidden"
         type="file"
         accept="image/*"

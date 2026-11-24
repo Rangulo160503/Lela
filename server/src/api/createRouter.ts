@@ -13,6 +13,8 @@ import {
   type AuthedRequest,
 } from './auth.js'
 import { localDateKey } from '../reglas/buildProductionDraft.js'
+import { parseRecipeFromPhoto } from '../servicios/recipeFromPhoto.js'
+import { parseExpenseFromPhoto } from '../servicios/expenseFromPhoto.js'
 
 export function createRouter(flujo: IAppFlujo, mvp: MvpFlujo): Router {
   const router = Router()
@@ -34,7 +36,11 @@ export function createRouter(flujo: IAppFlujo, mvp: MvpFlujo): Router {
 
   router.post('/auth/logout', requireAuth, (req: AuthedRequest, res) => {
     const header = req.headers.authorization
-    const token = header?.startsWith('Bearer ') ? header.slice(7) : ''
+    const queryToken =
+      typeof req.query.token === 'string' ? req.query.token : undefined
+    const token = header?.startsWith('Bearer ')
+      ? header.slice(7)
+      : ((req.headers['x-session-token'] as string | undefined) ?? queryToken ?? '')
     res.json(mvp.logout(token))
   })
 
@@ -217,7 +223,7 @@ export function createRouter(flujo: IAppFlujo, mvp: MvpFlujo): Router {
     )
   })
 
-  /** Foto desde cámara/galería (JPEG base64). Guarda en data/uploads. */
+  /** Foto (JPEG/PNG/WebP base64). Guarda en data/uploads/{kind}. */
   router.post('/uploads', requireAuth, (req: AuthedRequest, res) => {
     const body = req.body as { dataUrl?: string; kind?: string }
     const dataUrl = body.dataUrl ?? ''
@@ -242,11 +248,48 @@ export function createRouter(flujo: IAppFlujo, mvp: MvpFlujo): Router {
     res.json({ ok: true, path: `/uploads/${kind}/${filename}` })
   })
 
-  // Catalog admin
+  /** Fotos reutilizables (Configuración → Fotos). */
+  router.get('/uploads/library', requireAuth, (_req, res) => {
+    const dir = path.join(DATA_DIR, 'uploads', 'library')
+    fs.mkdirSync(dir, { recursive: true })
+    const items = fs
+      .readdirSync(dir)
+      .filter((name) => /\.(jpe?g|png|webp)$/i.test(name))
+      .map((name) => {
+        const full = path.join(dir, name)
+        const stat = fs.statSync(full)
+        return {
+          path: `/uploads/library/${name}`,
+          name,
+          createdAt: stat.mtime.toISOString(),
+        }
+      })
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    res.json({ ok: true, items })
+  })
+
+  router.post('/uploads/delete', requireAdmin, (req, res) => {
+    const raw = String((req.body as { path?: string }).path ?? '')
+    const match = /^\/uploads\/library\/([a-zA-Z0-9._-]+)$/.exec(raw)
+    if (!match) {
+      res.status(400).json({ ok: false, error: 'invalid_path' })
+      return
+    }
+    const full = path.join(DATA_DIR, 'uploads', 'library', match[1])
+    if (!fs.existsSync(full)) {
+      res.status(404).json({ ok: false, error: 'not_found' })
+      return
+    }
+    fs.unlinkSync(full)
+    res.json({ ok: true })
+  })
+
+  // Catálogo: lectura admin; alta/edición/baja suave disponible a cualquier sesión
+  // (Inventario edita stock/foto desde el piso; Config usa el mismo endpoint).
   router.get('/admin/products', requireAdmin, (_req, res) => {
     res.json({ ok: true, products: mvp.listProductsAdmin() })
   })
-  router.post('/admin/products', requireAdmin, (req: AuthedRequest, res) => {
+  router.post('/admin/products', requireAuth, (req: AuthedRequest, res) => {
     res.json(mvp.upsertProduct({ ...req.body, actorId: req.user?.id }))
   })
 
@@ -262,6 +305,41 @@ export function createRouter(flujo: IAppFlujo, mvp: MvpFlujo): Router {
   })
   router.post('/recipes', requireAdmin, (req, res) => {
     res.json(mvp.saveRecipe(req.body))
+  })
+  /** Foto de ficha → rellena nombre/notas/ingredientes (visión opcional). */
+  router.post('/recipes/parse-photo', requireAdmin, async (req, res) => {
+    const body = req.body as { dataUrl?: string; photoPath?: string }
+    const dataUrl = body.dataUrl ?? ''
+    if (!dataUrl.startsWith('data:image/')) {
+      res.status(400).json({ ok: false, error: 'invalid_image' })
+      return
+    }
+    const materials = mvp
+      .listRawMaterials()
+      .filter((m) => (m as { active?: number }).active !== 0)
+      .map((m) => ({
+        id: String((m as { id: string }).id),
+        name: String((m as { name: string }).name),
+        unit: String((m as { unit?: string }).unit ?? ''),
+      }))
+    const products = mvp
+      .listProductsAdmin()
+      .filter((p) => (p as { active?: number }).active !== 0)
+      .map((p) => ({
+        id: String((p as { id: string }).id),
+        name: String((p as { name: string }).name),
+      }))
+    const result = await parseRecipeFromPhoto({ dataUrl, materials, products })
+    if (!result.ok) {
+      // 200 + ok:false para que el cliente lea el error sin tratarlo como caída del server
+      res.json(result)
+      return
+    }
+    res.json({
+      ok: true,
+      photoPath: body.photoPath ?? null,
+      recipe: result.recipe,
+    })
   })
 
   router.get('/production-plans', requireAuth, (_req, res) => {
@@ -313,6 +391,17 @@ export function createRouter(flujo: IAppFlujo, mvp: MvpFlujo): Router {
   })
   router.post('/expenses', requireAuth, (req: AuthedRequest, res) => {
     res.json(mvp.registerExpense({ ...req.body, createdBy: req.user?.id }))
+  })
+  /** Lee monto/descripción de una foto de factura (visión opcional). */
+  router.post('/expenses/parse-photo', requireAuth, async (req, res) => {
+    const dataUrl =
+      typeof req.body?.dataUrl === 'string' ? req.body.dataUrl : ''
+    if (!dataUrl) {
+      res.status(400).json({ ok: false, error: 'invalid_image' })
+      return
+    }
+    const result = await parseExpenseFromPhoto({ dataUrl })
+    res.status(result.ok ? 200 : 400).json(result)
   })
   router.post('/cash/transfer', requireAuth, (req: AuthedRequest, res) => {
     res.json(mvp.transferCash({ ...req.body, createdBy: req.user?.id }))

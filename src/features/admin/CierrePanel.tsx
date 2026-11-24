@@ -215,23 +215,22 @@ export function CierrePanel({
   const expensesTotal = expenses.reduce((s, e) => s + e.amount, 0)
 
   return (
-    <section className="admin-dash">
-      <label className="field__label" htmlFor="cierre-section">
-        Apartado
+    <section className="cierre-panel">
+      <label className="field" htmlFor="cierre-section">
+        <span className="field__label">Apartado</span>
+        <select
+          id="cierre-section"
+          className="field__input admin-nav__select"
+          value={section}
+          onChange={(e) => setSection(e.target.value as CierreSection)}
+        >
+          {SECTION_OPTIONS.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
       </label>
-      <select
-        id="cierre-section"
-        className="field__input admin-nav__select"
-        value={section}
-        onChange={(e) => setSection(e.target.value as CierreSection)}
-        style={{ marginBottom: '1rem' }}
-      >
-        {SECTION_OPTIONS.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.label}
-          </option>
-        ))}
-      </select>
 
       {section === 'caja' ? (
         <CajaPanel

@@ -4,8 +4,8 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // GitHub Pages: https://Rangulo160503.github.io/Lela/
-  base: '/Lela/',
+  // UI principal. Pages: LELA_BASE=/Lela/
+  base: process.env.LELA_BASE ?? '/',
   server: {
     host: true,
     port: 5173,

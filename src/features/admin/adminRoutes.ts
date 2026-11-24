@@ -5,6 +5,7 @@ export type AdminTabId =
   | 'materials'
   | 'recipes'
   | 'promos'
+  | 'photos'
   | 'suppliers'
   | 'proposals'
   | 'users'
@@ -33,6 +34,7 @@ export const CONFIG_ITEMS: AdminNavItem[] = [
   { id: 'promos', label: 'Combos', path: '/admin/config/combos' },
   { id: 'materials', label: 'Materia prima', path: '/admin/config/materia-prima' },
   { id: 'recipes', label: 'Recetas', path: '/admin/config/recetas' },
+  { id: 'photos', label: 'Fotos', path: '/admin/config/fotos' },
   { id: 'suppliers', label: 'Proveedores', path: '/admin/config/proveedores' },
   { id: 'proposals', label: 'Aprobaciones', path: '/admin/config/aprobaciones' },
   { id: 'users', label: 'Usuarios', path: '/admin/config/usuarios' },
@@ -154,7 +156,7 @@ export function areaLede(area: AdminArea): string {
   if (area === 'dashboard') {
     return 'Elige un turno para ver su resumen de actividad y caja.'
   }
-  return 'Catálogo, combos, maestros, usuarios y respaldos.'
+  return 'Catálogo, combos, fotos, maestros, usuarios y respaldos.'
 }
 
 export function areaMeta(area: AdminArea): string {

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ProductPhotoField } from '../../components/ProductPhotoField'
+import { SoftConfirm } from '../../components/SoftConfirm'
 import { apiPost } from '../../data/api'
 import { PRODUCT_PHOTO_LIBRARY, productImage } from '../../data/productVisuals'
 import { formatMoney } from '../../domain/buildProforma'
@@ -13,6 +14,7 @@ type ProductRow = {
   presentationName?: string
   description?: string
   photoPath?: string | null
+  active?: number | boolean
 }
 
 type ProductsPanelProps = {
@@ -40,11 +42,17 @@ const emptyForm: ProductForm = {
   photoPath: PRODUCT_PHOTO_LIBRARY[0]?.path ?? '/images/products/pan.jpg',
 }
 
+function isActive(p: ProductRow): boolean {
+  return p.active !== 0 && p.active !== false
+}
+
 export function ProductsPanel({ products, onSaved, onMessage }: ProductsPanelProps) {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<ProductForm>(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState(false)
   const editing = Boolean(form.id)
+  const visible = products.filter(isActive)
 
   function openCreate() {
     setForm(emptyForm)
@@ -69,7 +77,7 @@ export function ProductsPanel({ products, onSaved, onMessage }: ProductsPanelPro
     setForm(emptyForm)
   }
 
-  async function save() {
+  async function save(active = true) {
     if (!form.name.trim()) {
       onMessage('Nombre requerido')
       return
@@ -84,8 +92,11 @@ export function ProductsPanel({ products, onSaved, onMessage }: ProductsPanelPro
         presentationName: form.presentationName.trim() || 'Unidad',
         description: form.description.trim(),
         photoPath: form.photoPath,
+        active,
       })
-      onMessage(editing ? 'Producto actualizado' : 'Producto guardado')
+      onMessage(
+        !active ? 'Producto eliminado' : editing ? 'Producto actualizado' : 'Producto guardado',
+      )
       close()
       onSaved()
     } catch (err) {
@@ -93,6 +104,11 @@ export function ProductsPanel({ products, onSaved, onMessage }: ProductsPanelPro
     } finally {
       setSaving(false)
     }
+  }
+
+  async function remove() {
+    if (!form.id) return
+    await save(false)
   }
 
   return (
@@ -104,7 +120,7 @@ export function ProductsPanel({ products, onSaved, onMessage }: ProductsPanelPro
         </button>
       </div>
 
-      {products.length === 0 ? (
+      {visible.length === 0 ? (
         <p className="ds-empty">Sin productos.</p>
       ) : (
         <div className="ds-table-wrap">
@@ -120,7 +136,7 @@ export function ProductsPanel({ products, onSaved, onMessage }: ProductsPanelPro
               </tr>
             </thead>
             <tbody>
-              {products.map((p) => (
+              {visible.map((p) => (
                 <tr
                   key={p.id}
                   className="ds-table__row--clickable"
@@ -164,13 +180,24 @@ export function ProductsPanel({ products, onSaved, onMessage }: ProductsPanelPro
         onClose={close}
         footer={
           <div className="admin-form__actions">
-            <button type="button" className="btn btn--ghost" onClick={close} disabled={saving}>
-              Cancelar
-            </button>
+            {editing ? (
+              <button
+                type="button"
+                className="btn btn--danger"
+                onClick={() => setConfirmRemove(true)}
+                disabled={saving}
+              >
+                Eliminar
+              </button>
+            ) : (
+              <button type="button" className="btn btn--ghost" onClick={close} disabled={saving}>
+                Cancelar
+              </button>
+            )}
             <button
               type="button"
               className="btn btn--primary"
-              onClick={() => void save()}
+              onClick={() => void save(true)}
               disabled={saving}
             >
               {saving ? 'Guardando…' : 'Guardar'}
@@ -235,9 +262,23 @@ export function ProductsPanel({ products, onSaved, onMessage }: ProductsPanelPro
             value={form.photoPath}
             onChange={(photoPath) => setForm({ ...form, photoPath })}
             onError={onMessage}
+            allowSavedPhotos
           />
         </div>
       </AdminDrawer>
+
+      <SoftConfirm
+        open={confirmRemove}
+        danger
+        title={`¿Eliminar «${form.name || 'este producto'}»?`}
+        body="Se oculta del catálogo y del inventario."
+        confirmLabel="Sí, eliminar"
+        onCancel={() => setConfirmRemove(false)}
+        onConfirm={() => {
+          setConfirmRemove(false)
+          void remove()
+        }}
+      />
     </section>
   )
 }
