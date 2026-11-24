@@ -171,6 +171,7 @@ app.get(['/', '/index.html', '/lite', '/lite/'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
   res.setHeader('Pragma', 'no-cache')
   res.setHeader('Expires', '0')
+  res.type('html')
   if (wantsLite(req)) {
     res.sendFile(path.join(LITE_DIR, 'index.html'))
     return

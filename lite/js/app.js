@@ -201,7 +201,7 @@
         main.innerHTML =
           '<div class="panel"><p class="msg">' +
           why +
-          '</p><p class="empty">Revisá que la PC tenga el sistema encendido y que el iPad esté en la misma Wi‑Fi (mejor que el túnel).</p><p style="text-align:center;margin-top:1rem"><button type="button" class="btn btn-primary" id="btn-retry-snap">Reintentar</button></p></div>'
+          '</p><p class="empty">Revisá que la PC tenga el sistema encendido y que este aparato esté en la misma Wi‑Fi.</p><p style="text-align:center;margin-top:1rem"><button type="button" class="btn btn-primary" id="btn-retry-snap">Reintentar</button></p></div>'
         var btn = $('btn-retry-snap')
         if (btn) {
           btn.onclick = function () {
