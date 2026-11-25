@@ -274,27 +274,19 @@
     if (btn) btn.disabled = true
     Lela.post('/auth/login', { username: username, pin: pin }, function (data) {
       if (btn) btn.disabled = false
-      if (!data || data.error === 'timeout') {
-        msg.textContent = 'El servidor no respondió. Probá de nuevo o usá Wi‑Fi local.'
-        msg.style.display = 'block'
-        return
-      }
-      if (!data || data.error === 'network') {
-        msg.textContent = 'Sin conexión con el servidor.'
-        msg.style.display = 'block'
-        return
-      }
       if (!data || !data.ok || !data.token) {
-        msg.textContent =
-          (data && data.error && data.error !== 'unauthorized'
-            ? data.error
-            : null) || 'Usuario o PIN incorrecto.'
+        msg.textContent = Lela.friendlyError(
+          data && data.error,
+          'Usuario o PIN incorrecto.'
+        )
         msg.style.display = 'block'
         return
       }
       Lela.setToken(data.token)
       Lela.state.user = data.user
       Lela.state.snapshot = null
+      msg.textContent = ''
+      msg.style.display = 'none'
       /* Entrar YA — no bloquear el login esperando /snapshot (iPad). */
       try {
         Lela.toast('Bienvenido', 'ok')
@@ -304,6 +296,58 @@
         if (Lela.state.user) route()
       })
     })
+  }
+
+  function paintLanBanner(info) {
+    var box = $('login-lan-banner')
+    if (!box) return
+    var host = ''
+    try {
+      host = String(location.hostname || '')
+    } catch (e) {}
+    var onTunnel = host.indexOf('trycloudflare.com') >= 0
+    var lans = (info && info.lan) || []
+    if (!onTunnel && !lans.length) {
+      box.style.display = 'none'
+      box.innerHTML = ''
+      return
+    }
+    var html =
+      '<strong>iPad / tablet vieja: usá Wi‑Fi local (no el link trycloudflare)</strong>'
+    if (onTunnel) {
+      html +=
+        'Este túnel HTTPS no abre en iOS 9. En Safari del iPad abrí una de estas URLs (misma Wi‑Fi que la PC): '
+    } else {
+      html += 'Si otra tablet no carga el túnel, usá: '
+    }
+    if (lans.length) {
+      var i
+      for (i = 0; i < lans.length; i++) {
+        if (i) html += ' · '
+        html +=
+          '<a href="' +
+          lans[i] +
+          '">' +
+          lans[i] +
+          '</a>'
+      }
+    } else {
+      html += 'http://IP-DE-LA-PC:3000/ (está en ipad-url.txt en la PC)'
+    }
+    box.innerHTML = html
+    box.style.display = 'block'
+  }
+
+  function loadAccessHint() {
+    /* Silencioso: si el endpoint no existe aún, no mostrar errores. */
+    try {
+      Lela.get('/public/access', function (data) {
+        if (data && data.ok) paintLanBanner(data)
+        else paintLanBanner(null)
+      })
+    } catch (e) {
+      paintLanBanner(null)
+    }
   }
 
   function doLogout() {
@@ -338,6 +382,10 @@
     } else {
       window.onhashchange = route
     }
+
+    try {
+      loadAccessHint()
+    } catch (eHint) {}
 
     var token = Lela.getToken()
     if (!token) {

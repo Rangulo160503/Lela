@@ -43,8 +43,11 @@ npm.cmd run pack:portable
 
 ## Datos
 
-- SQLite: `data/panaderia-lela.sqlite`
-- Respaldos: `data/backups/`
+- SQLite durable (no se borra con git pull / ZIP): `%LOCALAPPDATA%\PanaderiaLela\data\panaderia-lela.sqlite`
+- Catálogo en git: `data/bundled/panaderia-lela.sqlite` — `Iniciar.bat` lo restaura si la PC tiene menos productos
+- Si existe `data/` junto al programa con una BD más completa, se migra sola a AppData
+- Respaldos: `...\data\backups\` · seguridad ante update: `%LOCALAPPDATA%\PanaderiaLela\safety\`
+- Override: variable `LELA_DATA_DIR`
 
 ## Arquitectura
 
@@ -77,9 +80,9 @@ Paleta artesanal (crema, café, terracota). Tipografías autoalojadas: **Fraunce
 - Capturas: `docs/screenshots/lela-*-redesign.png`
 
 - **UI principal = React** (`npm run build:web` → `dist/`). Abrí `http://IP:3000/` — Facturación (Nueva venta), Inventario, Cierre, Dashboard, Config. Es la versión del criterio del cliente.
-- **UI por defecto (`/`):** `lite/` — Facturar · Saldos de inventario · **Gastos** (foto de factura o manual) · Cierre. iPad 4 / iOS 9 incluidos. Auth por `?token=` en Safari viejo.
+- **UI por defecto (`/`):** `lite/` — Facturar · Saldos de inventario · **Gastos** (foto de factura o manual) · Cierre. Abrir turno exige **monto de apertura**; admin puede editarlo con el turno abierto. iPad 4 / iOS 9. Auth por `?token=` en Safari viejo.
 - **Vitrina clientes (`/menu`):** página pública (sin login) con productos activos — foto, nombre, precio — y datos de la panadería. API: `GET /api/public/menu`. Edición en vivo: Config → **Menú público** (`GET/POST /api/bakery-public`). Dominio propio: después.
 - **React opcional:** `http://IP:3000/react`
-- Preferí Wi‑Fi LAN antes que el túnel en tablets viejas.
+- **iPad / iOS 9:** solo `http://IP-LAN:3000/` (archivo `ipad-url.txt`). El túnel `trycloudflare` **no abre** en iOS 9 (certificado). Celulares modernos sí pueden usar el túnel.
 
 Fórmulas de venta/inventario intactas; sin dependencias nuevas.

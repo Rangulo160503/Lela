@@ -1141,10 +1141,38 @@
     )
   }
 
+  function openingCashError(code) {
+    return Lela.friendlyError(code, 'No se pudo abrir')
+  }
+
+  function readOpeningCashInput(inp) {
+    var raw = String(inp.value || '').trim()
+    if (raw === '') return null
+    var n = Number(raw)
+    if (!isFinite(n) || n < 0) return null
+    return n
+  }
+
   function renderNoShift(main) {
     main.appendChild(el('p', 'empty', 'No hay turno abierto.'))
     var panel = el('div', 'panel')
     panel.appendChild(el('h2', 'h2', 'Abrir turno'))
+    panel.appendChild(
+      el(
+        'p',
+        'hint',
+        'Contá el efectivo en caja e indicá el monto. Es obligatorio para abrir.'
+      )
+    )
+    var amountInp = document.createElement('input')
+    amountInp.type = 'number'
+    amountInp.className = 'field__input'
+    amountInp.min = '0'
+    amountInp.step = '1'
+    amountInp.placeholder = '0'
+    amountInp.setAttribute('inputmode', 'decimal')
+    amountInp.setAttribute('aria-label', 'Monto de apertura')
+    panel.appendChild(field('Monto de apertura (efectivo)', amountInp))
     var list = el('div', 'list')
     list.appendChild(el('div', 'row empty', 'Cargando…'))
     panel.appendChild(list)
@@ -1167,19 +1195,31 @@
           btn.type = 'button'
           btn.style.width = 'auto'
           btn.onclick = function () {
+            var openingCash = readOpeningCashInput(amountInp)
+            if (openingCash == null) {
+              Lela.toast('Indicá el monto de apertura', 'err')
+              try {
+                amountInp.focus()
+              } catch (e) {}
+              return
+            }
             btn.disabled = true
-            Lela.post('/shifts/open', { templateId: t.id }, function (res) {
-              btn.disabled = false
-              if (!res || !res.ok) {
-                Lela.toast((res && res.error) || 'No se pudo abrir', 'err')
-                return
+            Lela.post(
+              '/shifts/open',
+              { templateId: t.id, openingCash: openingCash },
+              function (res) {
+                btn.disabled = false
+                if (!res || !res.ok) {
+                  Lela.toast(openingCashError(res && res.error), 'err')
+                  return
+                }
+                Lela.toast('Turno abierto', 'ok')
+                cierreCounted = null
+                cierreInventory = null
+                cierreExpenses = null
+                rerender(Lela.screens.cierre, main)
               }
-              Lela.toast('Turno abierto', 'ok')
-              cierreCounted = null
-              cierreInventory = null
-              cierreExpenses = null
-              rerender(Lela.screens.cierre, main)
-            })
+            )
           }
           act.appendChild(btn)
           row.appendChild(act)
@@ -1189,8 +1229,83 @@
     })
   }
 
+  function renderOpeningCashCard(main, host) {
+    var open = snap().openShift
+    if (!open || !open.id) return
+    var card = el('div', 'count-card')
+    card.appendChild(el('div', 'count-card__title', 'Fondo de apertura'))
+    var current =
+      open.expectedCash != null ? Number(open.expectedCash) : null
+    card.appendChild(
+      el(
+        'div',
+        'count-card__meta',
+        current != null && isFinite(current)
+          ? 'Registrado ' + Lela.money(current)
+          : 'Sin monto registrado'
+      )
+    )
+    if (Lela.state.isAdmin()) {
+      var inp = document.createElement('input')
+      inp.type = 'number'
+      inp.className = 'field__input'
+      inp.min = '0'
+      inp.step = '1'
+      inp.value = current != null && isFinite(current) ? String(current) : ''
+      inp.setAttribute('aria-label', 'Editar fondo de apertura')
+      card.appendChild(field('Monto de apertura', inp))
+      var save = el('button', 'btn btn-sm btn-primary', 'Guardar monto')
+      save.type = 'button'
+      save.style.width = 'auto'
+      save.style.marginTop = '0.5rem'
+      save.onclick = function () {
+        var openingCash = readOpeningCashInput(inp)
+        if (openingCash == null) {
+          Lela.toast('Indicá un monto válido', 'err')
+          return
+        }
+        save.disabled = true
+        Lela.post(
+          '/shifts/' + open.id + '/opening-cash',
+          { openingCash: openingCash },
+          function (res) {
+            save.disabled = false
+            if (!res || !res.ok) {
+              Lela.toast(
+                openingCashError(res && res.error) || 'No se pudo guardar',
+                'err'
+              )
+              return
+            }
+            Lela.toast('Monto de apertura actualizado', 'ok')
+            cierreCounted = null
+            rerender(Lela.screens.cierre, main)
+          }
+        )
+      }
+      card.appendChild(save)
+      card.appendChild(
+        el(
+          'p',
+          'hint',
+          'Solo admin/principal puede corregir el fondo con el que se abrió.'
+        )
+      )
+    } else {
+      card.appendChild(
+        el(
+          'p',
+          'hint',
+          'Si el monto está mal, pedile a un admin que lo corrija.'
+        )
+      )
+    }
+    host.appendChild(card)
+  }
+
   function renderCaja(main, host) {
     ensureCierreState()
+    renderOpeningCashCard(main, host)
     var i
     for (i = 0; i < CAJA_IDS.length; i++) {
       ;(function (id) {

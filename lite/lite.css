@@ -490,7 +490,7 @@ table.data input, table.data select {
   overflow: hidden; clip: rect(1px, 1px, 1px, 1px);
 }
 
-/* iOS 9: sin CSS Grid — forzar flex como en la versión Lela */
+/* iOS 9: sin CSS Grid — form primero (Entrar siempre a la vista) */
 .login-editorial {
   display: -webkit-flex !important;
   display: flex !important;
@@ -498,11 +498,32 @@ table.data input, table.data select {
   flex-direction: column !important;
   min-height: 100vh !important;
 }
+.login-lan-banner {
+  -webkit-flex-shrink: 0 !important;
+  flex-shrink: 0 !important;
+  padding: 0.85rem 1rem !important;
+  background: #7a1f16 !important;
+  color: #fff7f0 !important;
+  font-size: 0.92rem !important;
+  line-height: 1.35 !important;
+  text-align: left !important;
+}
+.login-lan-banner a {
+  color: #fff !important;
+  font-weight: 700 !important;
+  word-break: break-all !important;
+}
+.login-lan-banner strong {
+  display: block !important;
+  margin-bottom: 0.35rem !important;
+}
 .login-editorial__visual {
   position: relative !important;
-  /* iPad: hero compacto para que el form quede a la vista sin scroll */
-  min-height: 22vh !important;
-  max-height: 26vh !important;
+  /* iPad: hero abajo y compacto; el login queda arriba */
+  -webkit-order: 2 !important;
+  order: 2 !important;
+  min-height: 18vh !important;
+  max-height: 22vh !important;
   overflow: hidden !important;
   background-color: #3d2b1f;
   background-image: url('/images/hero-bakery.jpg');
@@ -537,14 +558,21 @@ table.data input, table.data select {
 .login-editorial__panel {
   display: -webkit-flex !important;
   display: flex !important;
-  -webkit-align-items: center !important;
-  align-items: center !important;
+  -webkit-align-items: flex-start !important;
+  align-items: flex-start !important;
   -webkit-justify-content: center !important;
   justify-content: center !important;
+  -webkit-order: 1 !important;
+  order: 1 !important;
   -webkit-flex: 1 !important;
   flex: 1 !important;
-  padding: 1.5rem 1.25rem 2rem !important;
+  padding: 1.25rem 1.25rem 1.5rem !important;
   background: var(--cream) !important;
+}
+.login-editorial__form-wrap {
+  width: 100% !important;
+  max-width: 22rem !important;
+  margin: 0 auto !important;
 }
 .login-editorial__brand {
   display: -webkit-flex !important;
@@ -657,7 +685,16 @@ table.data input, table.data select {
     -webkit-flex-direction: row !important;
     flex-direction: row !important;
   }
+  .login-lan-banner {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 5 !important;
+  }
   .login-editorial__visual {
+    -webkit-order: 1 !important;
+    order: 1 !important;
     -webkit-flex: 1.15 !important;
     flex: 1.15 !important;
     min-height: 100vh !important;
@@ -666,6 +703,10 @@ table.data input, table.data select {
   .login-editorial__lede { display: block !important; }
   .login-editorial__display { font-size: 2.6rem !important; }
   .login-editorial__panel {
+    -webkit-order: 2 !important;
+    order: 2 !important;
+    -webkit-align-items: center !important;
+    align-items: center !important;
     -webkit-flex: 0.85 !important;
     flex: 0.85 !important;
   }

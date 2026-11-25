@@ -14,9 +14,16 @@ dist-ssr
 data/*.sqlite
 data/*.sqlite-*
 data/backups/
+data/recovery/
+# Catálogo empaquetado para restaurar en otras PCs vía Iniciar.bat
+!data/bundled/
+!data/bundled/**
 data/uploads/**
 !data/uploads/.keep
 data/legacy-imported.json
+ipad-url.txt
+server-err.txt
+server-log.txt
 runtime/
 portable-stage/
 Panaderia-Lela.zip

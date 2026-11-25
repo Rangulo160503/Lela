@@ -113,15 +113,41 @@ function Ensure-GitRemote {
   }
 }
 
+function Backup-LelaDataSafety {
+  # Copia de seguridad fuera del repo (sobrevive a limpiezas / ZIP nuevos)
+  $safetyRoot = Join-Path $env:LOCALAPPDATA 'PanaderiaLela\safety'
+  New-Item -ItemType Directory -Force -Path $safetyRoot | Out-Null
+  $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+  $targets = @(
+    (Join-Path $Root 'data'),
+    (Join-Path $env:LOCALAPPDATA 'PanaderiaLela\data')
+  )
+  foreach ($src in $targets) {
+    $db = Join-Path $src 'panaderia-lela.sqlite'
+    if (-not (Test-Path $db)) { continue }
+    $destDir = Join-Path $safetyRoot $stamp
+    New-Item -ItemType Directory -Force -Path $destDir | Out-Null
+    Copy-Item $db (Join-Path $destDir 'panaderia-lela.sqlite') -Force
+    foreach ($side in @('panaderia-lela.sqlite-wal', 'panaderia-lela.sqlite-shm')) {
+      $sidePath = Join-Path $src $side
+      if (Test-Path $sidePath) {
+        Copy-Item $sidePath (Join-Path $destDir $side) -Force -ErrorAction SilentlyContinue
+      }
+    }
+    $uploads = Join-Path $src 'uploads'
+    if (Test-Path $uploads) {
+      Copy-Item $uploads (Join-Path $destDir 'uploads') -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    Write-Host ("  Respaldo de seguridad: $destDir")
+    break
+  }
+}
+
 function Update-FromGitHub {
   $env:GIT_TERMINAL_PROMPT = '0'
   Write-Host '  Actualizando codigo desde GitHub...'
 
-  $dataSrc = Join-Path $Root 'data'
-  $dataPreserve = Join-Path $env:TEMP ('lela-data-' + [guid]::NewGuid().ToString('N'))
-  if (Test-Path $dataSrc) {
-    Copy-Item $dataSrc $dataPreserve -Recurse -Force
-  }
+  Backup-LelaDataSafety
 
   Push-Location $Root
   try {
@@ -138,11 +164,11 @@ function Update-FromGitHub {
       throw 'git fetch fallo (revisa Internet / acceso a GitHub).'
     }
 
-    # ZIP / carpeta suelta: los archivos son "untracked" y bloquean checkout.
-    # Borramos todo excepto .git y runtime (Node/MinGit); data ya esta en temp.
-    Write-Host '  Preparando checkout (limpia archivos del ZIP que bloquean)...'
+    # ZIP / carpeta suelta: untracked bloquean checkout.
+    # NUNCA borrar data/ ni runtime/ ni .git — ahi viven ventas y catálogo.
+    Write-Host '  Preparando checkout (preserva data/ y runtime/)...'
     Get-ChildItem -LiteralPath $Root -Force | Where-Object {
-      $_.Name -notin @('.git', 'runtime')
+      $_.Name -notin @('.git', 'runtime', 'data')
     } | ForEach-Object {
       Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
     }
@@ -158,15 +184,9 @@ function Update-FromGitHub {
     $head = (& git rev-parse --short HEAD 2>$null)
     $ErrorActionPreference = $prev
     Write-Host ("  Codigo actualizado: $head (origin/$Branch)")
+    Write-Host '  Carpeta data/ intacta (no se toca en el update).'
   } finally {
     Pop-Location
-  }
-
-  if (Test-Path $dataPreserve) {
-    New-Item -ItemType Directory -Force -Path $dataSrc | Out-Null
-    Copy-Item (Join-Path $dataPreserve '*') $dataSrc -Recurse -Force
-    Remove-Item $dataPreserve -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Host '  Datos locales (SQLite/fotos) preservados.'
   }
 }
 
@@ -326,6 +346,20 @@ $null = Ensure-Node
 Write-Host '  5) Dependencias...'
 Install-Dependencies
 
+Write-Host '  5b) Datos empaquetados (si la BD local esta vacia o incompleta)...'
+try {
+  $ensureJs = Join-Path $Root 'scripts\ensure-bundled-data.mjs'
+  if (Test-Path $ensureJs) {
+    if (Test-Path $nodeExe) {
+      & $nodeExe $ensureJs
+    } else {
+      & node $ensureJs
+    }
+  }
+} catch {
+  Write-Host ('  AVISO: no se pudo restaurar bundle: ' + $_.Exception.Message)
+}
+
 Write-Host '  6) UI React (build)...'
 Invoke-Npm -NpmArguments @('run', 'build:web')
 
@@ -407,17 +441,70 @@ if (-not $url) {
 }
 
 Set-Content -Path $urlFile -Value $url -Encoding ascii
+
+# iPad / iOS 9 NO abre trycloudflare (certificado). Usar Wi-Fi local HTTP.
+$lanIps = @()
+try {
+  Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+    Where-Object {
+      $_.IPAddress -notlike '127.*' -and
+      $_.PrefixOrigin -ne 'WellKnown' -and
+      $_.IPAddress -notlike '169.254.*'
+    } |
+    ForEach-Object { $lanIps += $_.IPAddress }
+} catch { }
+if (-not $lanIps.Count) {
+  try {
+    $lanIps = @(
+      Get-CimInstance Win32_NetworkAdapterConfiguration -ErrorAction SilentlyContinue |
+        Where-Object { $_.IPEnabled -and $_.IPAddress } |
+        ForEach-Object { $_.IPAddress } |
+        Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' -and $_ -notlike '127.*' -and $_ -notlike '169.254.*' }
+    )
+  } catch { }
+}
+$lanIps = @($lanIps | Select-Object -Unique)
+$ipadFile = Join-Path $Root 'ipad-url.txt'
+$ipadLines = @()
+$ipadLines += 'iPad / iOS 9 — NO uses el link trycloudflare (no abre).'
+$ipadLines += 'Misma Wi-Fi que esta PC. En Safari del iPad abrí:'
+$ipadLines += ''
+foreach ($ip in $lanIps) {
+  $ipadLines += ("http://{0}:3000/" -f $ip)
+}
+if (-not $lanIps.Count) {
+  $ipadLines += 'http://IP-DE-ESTA-PC:3000/'
+}
+$ipadLines += ''
+$ipadLines += 'Tunel (celulares modernos / menú clientes):'
+$ipadLines += $url
+Set-Content -Path $ipadFile -Value ($ipadLines -join "`r`n") -Encoding ascii
+
 Write-Host ''
 Write-Host '  LISTO'
 Write-Host "  Esta PC:     http://127.0.0.1:3000"
-Write-Host "  Red local:   http://IP-DE-ESTA-PC:3000"
+if ($lanIps.Count) {
+  Write-Host '  ========================================'
+  Write-Host '   iPad / tablet (Wi-Fi local, OBLIGATORIO)'
+  Write-Host '  ========================================'
+  foreach ($ip in $lanIps) {
+    Write-Host ("   http://{0}:3000/" -f $ip)
+  }
+  Write-Host '  (tambien en ipad-url.txt)'
+} else {
+  Write-Host '  Red local:   http://IP-DE-ESTA-PC:3000  (mira ipad-url.txt)'
+}
 Write-Host "  Internet:    $url"
-Write-Host '  (tambien en tunel-url.txt)'
+Write-Host '  (tunel-url.txt — NO sirve en iPad viejo / iOS 9)'
 Write-Host ''
 Write-Host '  Usuarios: admin/1234  ·  empleado/0000'
 Write-Host '  Deja esta ventana abierta. Para apagar: Detener.bat'
 Write-Host ''
 
+# Abrir LAN en la PC; el tunel es secundario (celulares / menu)
+$lanOpen = if ($lanIps.Count) { "http://$($lanIps[0]):3000/" } else { 'http://127.0.0.1:3000/' }
+$null = Open-Browser $lanOpen
+Start-Sleep -Seconds 1
 $null = Open-Browser $url
 
 while (-not $tunnel.HasExited) {

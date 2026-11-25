@@ -19,6 +19,7 @@ export function TurnosPage() {
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [expense, setExpense] = useState({ description: '', amount: 0, accountId: 'acc-efectivo' })
   const [showExpense, setShowExpense] = useState(false)
+  const [openingCashInput, setOpeningCashInput] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
   const [toastTone, setToastTone] = useState<'ok' | 'warn' | 'error'>('ok')
   const dismissToast = useCallback(() => setMsg(null), [])
@@ -88,8 +89,23 @@ export function TurnosPage() {
             <div className="turno-flow__block">
               <h2 className="turno-flow__title">Abrir turno</h2>
               <p className="page__hint">
-                La apertura usa el efectivo del cierre anterior como referencia.
+                Contá el efectivo en caja e indicá el monto. Es obligatorio para
+                abrir.
               </p>
+              <label className="field" htmlFor="turnos-opening-cash">
+                <span className="field__label">Monto de apertura (efectivo)</span>
+                <input
+                  id="turnos-opening-cash"
+                  className="field__input"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={openingCashInput}
+                  onChange={(e) => setOpeningCashInput(e.target.value)}
+                  placeholder="0"
+                  style={{ maxWidth: '14rem' }}
+                />
+              </label>
               <div className="ds-toolbar__end" style={{ marginTop: '0.75rem' }}>
                 {templates.map((t) => (
                   <button
@@ -97,15 +113,30 @@ export function TurnosPage() {
                     type="button"
                     className="btn btn--primary"
                     onClick={async () => {
+                      const raw = openingCashInput.trim()
+                      const openingCash = raw === '' ? NaN : Number(raw)
+                      if (!Number.isFinite(openingCash) || openingCash < 0) {
+                        notify(
+                          'Indicá el monto de apertura (efectivo en caja).',
+                          'error',
+                        )
+                        return
+                      }
                       const r = await apiPost<{ ok: boolean; error?: string }>(
                         '/shifts/open',
-                        { templateId: t.id },
+                        { templateId: t.id, openingCash },
                       )
+                      const err =
+                        r.error === 'opening_cash_required'
+                          ? 'Indicá el monto de apertura (efectivo en caja).'
+                          : r.error
                       notify(
-                        r.ok ? `Turno ${t.name} abierto` : r.error ?? 'Error',
+                        r.ok ? `Turno ${t.name} abierto` : err ?? 'Error',
                         r.ok ? 'ok' : 'error',
                       )
+                      if (r.ok) setOpeningCashInput('')
                       void load()
+                      void refresh()
                     }}
                   >
                     Abrir {t.name}

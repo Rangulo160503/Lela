@@ -67,6 +67,11 @@ function runMigrations(db: AppDatabase): void {
 export function closeDatabase(): void {
   if (!dbInstance) return
   try {
+    try {
+      dbInstance.pragma('wal_checkpoint(TRUNCATE)')
+    } catch {
+      // best-effort
+    }
     dbInstance.close()
   } catch {
     // already closed

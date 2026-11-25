@@ -11,25 +11,14 @@
   <title>Panadería Lela</title>
   <link rel="icon" href="/favicon.svg" />
   <!-- Solo lite.css: lela-ds (grid/gap/clamp) rompe el layout en iOS 9 -->
-  <link rel="stylesheet" href="/lite/lite.css?v=34" />
+  <link rel="stylesheet" href="/lite/lite.css?v=36" />
 </head>
 <body>
   <div id="toast-host" aria-live="polite"></div>
   <div id="confirm-host"></div>
 
   <div id="view-login" class="login-editorial">
-    <section class="login-editorial__visual" aria-hidden="true">
-      <img
-        class="login-editorial__photo"
-        src="/images/hero-bakery.jpg"
-        alt=""
-      />
-      <div class="login-editorial__veil">
-        <p class="login-editorial__eyebrow">Desde el horno</p>
-        <h1 class="login-editorial__display">Panadería Lela</h1>
-        <p class="login-editorial__lede">El sabor de cada día, listo para servir.</p>
-      </div>
-    </section>
+    <div id="login-lan-banner" class="login-lan-banner" style="display:none" role="alert"></div>
     <section class="login-editorial__panel">
       <div class="login-editorial__form-wrap">
         <div class="login-editorial__brand">
@@ -64,6 +53,18 @@
           <p id="login-msg" class="login-form__error" style="display:none"></p>
           <button type="button" id="btn-login" class="btn btn--primary btn--block">Entrar</button>
         </div>
+      </div>
+    </section>
+    <section class="login-editorial__visual" aria-hidden="true">
+      <img
+        class="login-editorial__photo"
+        src="/images/hero-bakery.jpg"
+        alt=""
+      />
+      <div class="login-editorial__veil">
+        <p class="login-editorial__eyebrow">Desde el horno</p>
+        <h1 class="login-editorial__display">Panadería Lela</h1>
+        <p class="login-editorial__lede">El sabor de cada día, listo para servir.</p>
       </div>
     </section>
   </div>
@@ -115,10 +116,10 @@
 
   <input id="file-pick" class="visually-hidden" type="file" accept="image/*" />
 
-  <script src="/lite/js/core.js?v=34"></script>
-  <script src="/lite/js/screens-ops.js?v=34"></script>
+  <script src="/lite/js/core.js?v=36"></script>
+  <script src="/lite/js/screens-ops.js?v=36"></script>
   <!-- app.js antes que admin: si admin falla, el login igual arranca -->
-  <script src="/lite/js/app.js?v=34"></script>
-  <script src="/lite/js/screens-admin.js?v=34"></script>
+  <script src="/lite/js/app.js?v=36"></script>
+  <script src="/lite/js/screens-admin.js?v=36"></script>
 </body>
 </html>

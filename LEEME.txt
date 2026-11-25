@@ -7,18 +7,20 @@ OPCION A — ZIP / carpeta en la PC de la panaderia
    (ej. C:\Panaderia-Lela).
 2) Doble clic en:  Iniciar.bat
    - Actualiza el codigo desde GitHub (git pull; instala Git si falta).
-   - Preserva data\ (SQLite, fotos, respaldos).
+   - NO borra datos: BD vive en %LOCALAPPDATA%\PanaderiaLela\data
+     (y la carpeta data\ del programa se migra sola si tenia datos).
    - Instala Node si falta, dependencias y arma la UI.
    - Reinicia si ya estaba corriendo.
    - Abre un link publico (tunel) y deja la ventana abierta.
-3) Use ese link en iPad / celular / otra PC.
-   Empleados (caja):  http://127.0.0.1:3000/
+3) Acceso segun dispositivo:
+   iPad / iOS 9 (caja):  SOLO Wi-Fi local HTTP
+     Abrí http://IP-DE-LA-PC:3000/  (esta en ipad-url.txt al iniciar)
+     El link trycloudflare NO abre en iPad viejo (certificado HTTPS).
+   Empleados en la PC:  http://127.0.0.1:3000/
      Facturar · Saldos · Gastos · Cierre
-   Clientes (vitrina): http://127.0.0.1:3000/menu
-     Productos + datos de la panaderia. Sin login.
+   Celulares modernos / clientes: link del tunel + /menu
    Datos de la vitrina (nombre, horario, telefono…):
      Config → Menú público (admin).
-   Con el tunel: agregue /menu al final del link para clientes.
 4) Para apagar:  Detener.bat
 
 Solo hay DOS botones:
@@ -36,7 +38,8 @@ OPCION B — Descargar desde GitHub
 Si Iniciar fallo a medias (npm / Python / remote origin):
   - Borrar la carpeta node_modules
   - Volver a ejecutar Iniciar.bat (se limpia solo y reintenta)
-  - O descargar de nuevo el ZIP y copiar encima, sin tocar data\
+  - O descargar de nuevo el ZIP; los datos ya no dependen de la carpeta del ZIP
+    (estan en %LOCALAPPDATA%\PanaderiaLela\data)
 
 USUARIOS INICIALES
 ------------------
@@ -45,9 +48,14 @@ USUARIOS INICIALES
 
 DATOS
 -----
-  Base:     data\panaderia-lela.sqlite
-  Respaldos: data\backups\
-  Fotos:    data\uploads\
+  Base durable:
+    %LOCALAPPDATA%\PanaderiaLela\data\panaderia-lela.sqlite
+  Respaldos:  ...\data\backups\
+  Fotos:      ...\data\uploads\
+  Catalogo empaquetado (git): data\bundled\panaderia-lela.sqlite
+    Al hacer Iniciar.bat, si la PC tiene menos productos, se restaura sola.
+  Copia de seguridad ante updates:
+    %LOCALAPPDATA%\PanaderiaLela\safety\
 
 NOTAS
 -----

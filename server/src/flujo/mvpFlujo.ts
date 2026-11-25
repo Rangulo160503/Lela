@@ -40,6 +40,56 @@ function notify() {
   publish('store-changed')
 }
 
+function parseOpeningCash(
+  raw: unknown,
+): { ok: true; value: number } | { ok: false; error: 'opening_cash_required' } {
+  if (raw === '' || raw === null || raw === undefined) {
+    return { ok: false, error: 'opening_cash_required' }
+  }
+  const n = typeof raw === 'number' ? raw : Number(raw)
+  if (!Number.isFinite(n) || n < 0) {
+    return { ok: false, error: 'opening_cash_required' }
+  }
+  return { ok: true, value: Math.round(n * 100) / 100 }
+}
+
+function setEfectivoBalance(
+  db: AppDatabase,
+  balance: number,
+  category: string,
+  referenceId: string,
+  note: string,
+  createdBy: string | undefined,
+  createdAt: string,
+) {
+  const prev = (
+    db
+      .prepare(`SELECT balance FROM cash_accounts WHERE id='acc-efectivo'`)
+      .get() as { balance: number } | undefined
+  )?.balance
+  const before = Number(prev) || 0
+  const next = Math.round(balance * 100) / 100
+  const delta = next - before
+  db.prepare(`UPDATE cash_accounts SET balance=? WHERE id='acc-efectivo'`).run(
+    next,
+  )
+  if (Math.abs(delta) < 0.009) return
+  db.prepare(
+    `INSERT INTO cash_movements
+      (id, account_id, amount, direction, category, reference_type, reference_id, note, created_by, created_at)
+     VALUES (?, 'acc-efectivo', ?, ?, ?, 'shift', ?, ?, ?, ?)`,
+  ).run(
+    randomUUID(),
+    Math.abs(delta),
+    delta >= 0 ? 'in' : 'out',
+    category,
+    referenceId,
+    note,
+    createdBy ?? null,
+    createdAt,
+  )
+}
+
 function publicUser(u: UserRow) {
   return {
     id: u.id,
@@ -972,11 +1022,15 @@ export function createMvpFlujo(deps: {
       businessDate: string
       openedBy?: string
       userIds?: string[]
+      openingCash?: unknown
     }) {
       const open = deps.db
         .prepare(`SELECT id FROM shifts WHERE status='open' LIMIT 1`)
         .get() as { id: string } | undefined
       if (open) return { ok: false as const, error: 'already_open', shiftId: open.id }
+
+      const parsed = parseOpeningCash(input.openingCash)
+      if (!parsed.ok) return parsed
 
       const prev = deps.db
         .prepare(
@@ -988,26 +1042,93 @@ export function createMvpFlujo(deps: {
         | undefined
 
       const id = randomUUID()
-      deps.db.prepare(
-        `INSERT INTO shifts
-          (id, template_id, business_date, status, opened_at, opened_by, previous_shift_id, expected_cash)
-         VALUES (?, ?, ?, 'open', ?, ?, ?, ?)`,
-      ).run(
-        id,
-        input.templateId,
-        input.businessDate,
-        new Date().toISOString(),
-        input.openedBy ?? null,
-        prev?.id ?? null,
-        prev?.counted_cash ?? 0,
-      )
-      for (const uid of input.userIds ?? []) {
+      const openedAt = new Date().toISOString()
+      const tx = deps.db.transaction(() => {
         deps.db.prepare(
-          `INSERT INTO shift_assignments (shift_id, user_id) VALUES (?, ?)`,
-        ).run(id, uid)
-      }
+          `INSERT INTO shifts
+            (id, template_id, business_date, status, opened_at, opened_by, previous_shift_id, expected_cash)
+           VALUES (?, ?, ?, 'open', ?, ?, ?, ?)`,
+        ).run(
+          id,
+          input.templateId,
+          input.businessDate,
+          openedAt,
+          input.openedBy ?? null,
+          prev?.id ?? null,
+          parsed.value,
+        )
+        for (const uid of input.userIds ?? []) {
+          deps.db.prepare(
+            `INSERT INTO shift_assignments (shift_id, user_id) VALUES (?, ?)`,
+          ).run(id, uid)
+        }
+        setEfectivoBalance(
+          deps.db,
+          parsed.value,
+          'apertura',
+          id,
+          'Fondo de apertura',
+          input.openedBy,
+          openedAt,
+        )
+      })
+      tx()
       notify()
-      return { ok: true as const, id, previousShiftId: prev?.id ?? null }
+      return {
+        ok: true as const,
+        id,
+        previousShiftId: prev?.id ?? null,
+        openingCash: parsed.value,
+      }
+    },
+
+    updateOpeningCash(input: {
+      shiftId: string
+      openingCash?: unknown
+      updatedBy?: string
+    }) {
+      const shift = deps.db
+        .prepare(
+          `SELECT id, expected_cash as expectedCash, status FROM shifts WHERE id=?`,
+        )
+        .get(input.shiftId) as
+        | { id: string; expectedCash: number | null; status: string }
+        | undefined
+      if (!shift || shift.status !== 'open') {
+        return { ok: false as const, error: 'not_open' }
+      }
+      const parsed = parseOpeningCash(input.openingCash)
+      if (!parsed.ok) return parsed
+
+      const oldOpening = Number(shift.expectedCash) || 0
+      const delta = parsed.value - oldOpening
+      const at = new Date().toISOString()
+      const tx = deps.db.transaction(() => {
+        deps.db.prepare(`UPDATE shifts SET expected_cash=? WHERE id=?`).run(
+          parsed.value,
+          input.shiftId,
+        )
+        if (Math.abs(delta) > 0.009) {
+          const bal = (
+            deps.db
+              .prepare(`SELECT balance FROM cash_accounts WHERE id='acc-efectivo'`)
+              .get() as { balance: number } | undefined
+          )?.balance
+          const next = (Number(bal) || 0) + delta
+          setEfectivoBalance(
+            deps.db,
+            next,
+            'apertura_ajuste',
+            input.shiftId,
+            `Ajuste fondo de apertura (${oldOpening} → ${parsed.value})`,
+            input.updatedBy,
+            at,
+          )
+        }
+      })
+      tx()
+      notify()
+      return { ok: true as const, openingCash: parsed.value }
     },
 
     getOpenShift() {

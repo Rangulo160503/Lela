@@ -239,6 +239,7 @@ const server = app.listen(PORT, HOST, () => {
     console.log(`  Red:     http://${ip}:${PORT}/`)
   }
   console.log('  Usuarios: admin / 1234   |   empleado / 0000')
+  console.log(`  Datos:   ${DATA_DIR}`)
   console.log('')
 })
 

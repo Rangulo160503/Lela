@@ -66,17 +66,33 @@ function readStoredSection(): CierreSection {
 }
 
 type CierrePanelProps = {
-  openShift: { id: string; businessDate: string; openedAt?: string } | null
+  openShift: {
+    id: string
+    businessDate: string
+    openedAt?: string
+    expectedCash?: number | null
+  } | null
   products: ProductRow[]
   accounts: Account[]
+  canEditOpening?: boolean
   onSaved: () => void
   onMessage?: (msg: string) => void
+}
+
+function openingCashMessage(error?: string) {
+  if (error === 'opening_cash_required') {
+    return 'Indicá el monto de apertura (efectivo en caja).'
+  }
+  if (error === 'already_open') return 'Ya hay un turno abierto.'
+  if (error === 'not_open') return 'No hay turno abierto.'
+  return error ?? 'No se pudo guardar'
 }
 
 export function CierrePanel({
   openShift,
   products,
   accounts,
+  canEditOpening = false,
   onSaved,
   onMessage,
 }: CierrePanelProps) {
@@ -90,6 +106,20 @@ export function CierrePanel({
   const [cajaRefresh, setCajaRefresh] = useState(0)
   const [expenses, setExpenses] = useState<ExpenseRow[]>([])
   const [section, setSection] = useState<CierreSection>(readStoredSection)
+  const [openingCashInput, setOpeningCashInput] = useState('')
+  const [editOpeningInput, setEditOpeningInput] = useState('')
+
+  useEffect(() => {
+    if (!openShift) {
+      setEditOpeningInput('')
+      return
+    }
+    setEditOpeningInput(
+      openShift.expectedCash != null && Number.isFinite(openShift.expectedCash)
+        ? String(openShift.expectedCash)
+        : '',
+    )
+  }, [openShift?.id, openShift?.expectedCash])
 
   useEffect(() => {
     try {
@@ -141,19 +171,54 @@ export function CierrePanel({
   }
 
   async function openShiftAction(templateId: string, name: string) {
+    const raw = openingCashInput.trim()
+    const openingCash = raw === '' ? NaN : Number(raw)
+    if (!Number.isFinite(openingCash) || openingCash < 0) {
+      onMessage?.(openingCashMessage('opening_cash_required'))
+      return
+    }
     setBusy(true)
     try {
       const r = await apiPost<{ ok: boolean; error?: string }>('/shifts/open', {
         templateId,
+        openingCash,
       })
       if (!r.ok) {
-        onMessage?.(r.error ?? 'No se pudo abrir el turno')
+        onMessage?.(openingCashMessage(r.error))
         return
       }
+      setOpeningCashInput('')
       onMessage?.(`Turno ${name} abierto`)
       onSaved()
     } catch (err) {
       onMessage?.(err instanceof Error ? err.message : 'Error al abrir')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function saveOpeningCash() {
+    if (!openShift) return
+    const raw = editOpeningInput.trim()
+    const openingCash = raw === '' ? NaN : Number(raw)
+    if (!Number.isFinite(openingCash) || openingCash < 0) {
+      onMessage?.(openingCashMessage('opening_cash_required'))
+      return
+    }
+    setBusy(true)
+    try {
+      const r = await apiPost<{ ok: boolean; error?: string }>(
+        `/shifts/${openShift.id}/opening-cash`,
+        { openingCash },
+      )
+      if (!r.ok) {
+        onMessage?.(openingCashMessage(r.error))
+        return
+      }
+      onMessage?.('Monto de apertura actualizado')
+      onSaved()
+    } catch (err) {
+      onMessage?.(err instanceof Error ? err.message : 'Error al guardar')
     } finally {
       setBusy(false)
     }
@@ -233,16 +298,59 @@ export function CierrePanel({
       </label>
 
       {section === 'caja' ? (
-        <CajaPanel
-          view="caja"
-          accounts={accounts}
-          counted={countedCash}
-          onCountedChange={setCountedCash}
-          sinceIso={openShift?.openedAt ?? null}
-          refreshKey={cajaRefresh}
-          onSaved={handleCajaSaved}
-          onMessage={onMessage}
-        />
+        <>
+          {openShift ? (
+            <div className="admin-dash__band" style={{ marginBottom: '1rem' }}>
+              <h2 className="admin-dash__title">Fondo de apertura</h2>
+              <p className="page__hint">
+                {openShift.expectedCash != null
+                  ? `Registrado ${formatMoney(openShift.expectedCash)}`
+                  : 'Sin monto registrado'}
+                {canEditOpening
+                  ? '. Podés corregirlo si se abrió mal.'
+                  : '. Si está mal, pedile a un admin que lo corrija.'}
+              </p>
+              {canEditOpening ? (
+                <div
+                  className="ds-toolbar__end"
+                  style={{ marginTop: '0.75rem', gap: '0.75rem', flexWrap: 'wrap' }}
+                >
+                  <label className="field" htmlFor="edit-opening-cash">
+                    <span className="field__label">Monto de apertura</span>
+                    <input
+                      id="edit-opening-cash"
+                      className="field__input"
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={editOpeningInput}
+                      onChange={(e) => setEditOpeningInput(e.target.value)}
+                      style={{ maxWidth: '12rem' }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn--primary"
+                    disabled={busy}
+                    onClick={() => void saveOpeningCash()}
+                  >
+                    Guardar monto
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          <CajaPanel
+            view="caja"
+            accounts={accounts}
+            counted={countedCash}
+            onCountedChange={setCountedCash}
+            sinceIso={openShift?.openedAt ?? null}
+            refreshKey={cajaRefresh}
+            onSaved={handleCajaSaved}
+            onMessage={onMessage}
+          />
+        </>
       ) : null}
 
       {section === 'movimientos' ? (
@@ -320,8 +428,23 @@ export function CierrePanel({
             <>
               <h2 className="admin-dash__title">Sin turno abierto</h2>
               <p className="page__hint">
-                Abre un turno para poder emitir el cierre.
+                Contá el efectivo en caja e indicá el monto. Es obligatorio para
+                abrir.
               </p>
+              <label className="field" htmlFor="opening-cash">
+                <span className="field__label">Monto de apertura (efectivo)</span>
+                <input
+                  id="opening-cash"
+                  className="field__input"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={openingCashInput}
+                  onChange={(e) => setOpeningCashInput(e.target.value)}
+                  placeholder="0"
+                  style={{ maxWidth: '14rem' }}
+                />
+              </label>
               <div className="ds-toolbar__end" style={{ marginTop: '0.75rem' }}>
                 {templates.length === 0 ? (
                   <p className="page__hint">No hay plantillas de turno.</p>

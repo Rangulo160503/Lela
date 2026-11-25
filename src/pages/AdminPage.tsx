@@ -70,6 +70,7 @@ export function AdminPage() {
     id: string
     businessDate: string
     openedAt?: string
+    expectedCash?: number | null
   } | null>(null)
 
   async function refresh() {
@@ -81,6 +82,7 @@ export function AdminPage() {
             id: string
             businessDate: string
             openedAt?: string
+            expectedCash?: number | null
           } | null
         }>('/shifts')
         setOpenShift(s.open)
@@ -231,6 +233,7 @@ export function AdminPage() {
                 }[]
               }
               accounts={accounts}
+              canEditOpening={isAdmin}
               onSaved={() => void refresh()}
               onMessage={notify}
             />
