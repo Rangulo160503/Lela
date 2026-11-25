@@ -36,6 +36,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $stage "data\uploads") | Ou
 
 $copy = @(
   "lite",
+  "menu",
   "dist",
   "public",
   "server",

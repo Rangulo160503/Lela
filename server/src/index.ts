@@ -99,6 +99,7 @@ const mvp = createMvpFlujo({
 })
 
 const LITE_DIR = path.join(APP_ROOT, 'lite')
+const MENU_DIR = path.join(APP_ROOT, 'menu')
 
 const app = express()
 app.use(cors())
@@ -167,6 +168,18 @@ if (fs.existsSync(PUBLIC_DIR)) {
 
 app.use('/lite', express.static(LITE_DIR, { ...staticApp, index: 'index.html' }))
 
+/** Vitrina pública de clientes (sin login) */
+if (fs.existsSync(MENU_DIR)) {
+  app.use('/menu', express.static(MENU_DIR, { ...staticApp, index: false }))
+  app.get(['/menu', '/menu/'], (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+    res.setHeader('Pragma', 'no-cache')
+    res.setHeader('Expires', '0')
+    res.type('html')
+    res.sendFile(path.join(MENU_DIR, 'index.html'))
+  })
+}
+
 app.get(['/', '/index.html', '/lite', '/lite/'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
   res.setHeader('Pragma', 'no-cache')
@@ -201,6 +214,7 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/images')) return next()
   if (req.path.startsWith('/fonts')) return next()
   if (req.path.startsWith('/lite')) return next()
+  if (req.path.startsWith('/menu')) return next()
   if (/\.[a-z0-9]+$/i.test(req.path)) return next()
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
   if (wantsLite(req)) {
@@ -218,7 +232,8 @@ const server = app.listen(PORT, HOST, () => {
   const lans = getLanAddresses()
   console.log('')
   console.log('  Panadería Lela — servidor local')
-  console.log(`  Abrir:   http://127.0.0.1:${PORT}/        (UI lite: Gastos, Cierre, …)`)
+  console.log(`  Abrir:   http://127.0.0.1:${PORT}/        (caja / empleados)`)
+  console.log(`  Clientes: http://127.0.0.1:${PORT}/menu   (vitrina pública)`)
   console.log(`  React:   http://127.0.0.1:${PORT}/react   (opcional)`)
   for (const ip of lans) {
     console.log(`  Red:     http://${ip}:${PORT}/`)

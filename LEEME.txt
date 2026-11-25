@@ -12,9 +12,11 @@ OPCION A — ZIP / carpeta en la PC de la panaderia
    - Reinicia si ya estaba corriendo.
    - Abre un link publico (tunel) y deja la ventana abierta.
 3) Use ese link en iPad / celular / otra PC.
-   En esta PC tambien: http://127.0.0.1:3000
-   La UI es lite (barra: Facturar · Saldos · Gastos · Cierre).
-   Gastos: foto de factura o carga manual.
+   Empleados (caja):  http://127.0.0.1:3000/
+     Facturar · Saldos · Gastos · Cierre
+   Clientes (vitrina): http://127.0.0.1:3000/menu
+     Solo productos (foto, nombre, precio). Sin login.
+   Con el tunel: agregue /menu al final del link para clientes.
 4) Para apagar:  Detener.bat
 
 Solo hay DOS botones:
@@ -48,5 +50,5 @@ DATOS
 NOTAS
 -----
 - El link trycloudflare.com CAMBIA cada vez que reinicia el tunel.
-- Para dominio fijo (ej. app.tudominio.com) se configura despues.
-- iPad 4 / iOS 9 usa automaticamente la version lite.
+- Dominio fijo (ej. menu.tudominio.com) se configura despues; por ahora use /menu.
+- iPad 4 / iOS 9: la caja usa lite automaticamente.

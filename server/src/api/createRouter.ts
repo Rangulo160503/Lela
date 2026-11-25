@@ -24,6 +24,15 @@ export function createRouter(flujo: IAppFlujo, mvp: MvpFlujo): Router {
     res.json(flujo.getSystemInfo())
   })
 
+  /** Vitrina de clientes — sin login */
+  router.get('/public/menu', (_req, res) => {
+    res.json({
+      ok: true,
+      bakeryName: 'Panadería Lela',
+      products: mvp.listPublicMenu(),
+    })
+  })
+
   router.post('/auth/login', (req, res) => {
     const { username, pin } = req.body as { username?: string; pin?: string }
     if (!username || !pin) {

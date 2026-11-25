@@ -233,6 +233,26 @@ export function createMvpFlujo(deps: {
         .all()
     },
 
+    /** Catálogo público (vitrina): sin stock ni flags internos. */
+    listPublicMenu() {
+      return deps.db
+        .prepare(
+          `SELECT id, name, unit_price as unitPrice,
+                  description, presentation_name as presentationName, photo_path as photoPath
+           FROM products
+           WHERE active = 1
+           ORDER BY name COLLATE NOCASE`,
+        )
+        .all() as Array<{
+          id: string
+          name: string
+          unitPrice: number
+          description: string | null
+          presentationName: string | null
+          photoPath: string | null
+        }>
+    },
+
     listRawMaterials() {
       return deps.db
         .prepare(
