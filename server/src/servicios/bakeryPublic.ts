@@ -12,14 +12,15 @@ export type BakeryPublicInfo = {
 
 const SETTINGS_KEY = 'bakery_public'
 
+/** Datos de ejemplo; el encargado los cambia en Config → Menú público. */
 export const DEFAULT_BAKERY_PUBLIC: BakeryPublicInfo = {
   name: 'Panadería Lela',
   eyebrow: 'Desde el horno',
   tagline: 'El sabor de cada día, listo para servir.',
-  address: '',
-  phone: '',
-  hours: '',
-  note: '',
+  address: 'Centro, Costa Rica (completar dirección exacta)',
+  phone: '+506 8888-0000',
+  hours: 'Lunes a sábado 6:00 a. m. – 6:00 p. m. · Domingos 6:00 a. m. – 2:00 p. m.',
+  note: 'Precios en colones. Sujeto a disponibilidad del día. ¡Los esperamos!',
 }
 
 function normalize(input: Partial<BakeryPublicInfo> | null | undefined): BakeryPublicInfo {
@@ -39,11 +40,14 @@ export function getBakeryPublic(db: AppDatabase): BakeryPublicInfo {
   const row = db
     .prepare(`SELECT value FROM meta WHERE key = ?`)
     .get(SETTINGS_KEY) as { value: string } | undefined
-  if (!row) return { ...DEFAULT_BAKERY_PUBLIC }
+  if (!row) {
+    // Primera vez: deja ejemplos guardados para que Config y /menu ya muestren algo.
+    return saveBakeryPublic(db, DEFAULT_BAKERY_PUBLIC)
+  }
   try {
     return normalize(JSON.parse(row.value) as Partial<BakeryPublicInfo>)
   } catch {
-    return { ...DEFAULT_BAKERY_PUBLIC }
+    return saveBakeryPublic(db, DEFAULT_BAKERY_PUBLIC)
   }
 }
 
