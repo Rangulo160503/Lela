@@ -144,6 +144,92 @@ img {
   color: rgba(255, 250, 243, 0.88);
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* —— Search (estilo barra, sticky) —— */
+.search-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 0.75rem 1.25rem;
+  background: rgba(247, 241, 232, 0.92);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.search-bar__field {
+  position: relative;
+  width: min(40rem, 100%);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.search-bar__icon {
+  position: absolute;
+  left: 0.9rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.search-bar__input {
+  width: 100%;
+  height: 2.85rem;
+  padding: 0 2.6rem 0 2.65rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  outline: none;
+  box-shadow: 0 4px 16px rgba(61, 43, 31, 0.06);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.search-bar__input::placeholder {
+  color: #9a8a78;
+}
+
+.search-bar__input:focus {
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(196, 92, 38, 0.18);
+}
+
+.search-bar__input:disabled {
+  opacity: 0.65;
+}
+
+.search-bar__clear {
+  position: absolute;
+  right: 0.45rem;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.search-bar__clear:hover {
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+
 /* —— Shelf / products —— */
 .shelf {
   width: min(72rem, 100%);
@@ -168,6 +254,12 @@ img {
   margin: 0.4rem 0 0;
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+.shelf__meta {
+  margin: 0.55rem 0 0;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
 }
 
 .shelf__status {

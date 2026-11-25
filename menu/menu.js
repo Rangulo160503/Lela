@@ -26,6 +26,9 @@
     { key: 'pan', path: '/images/products/pan.jpg' },
   ]
 
+  var allProducts = []
+  var debounceTimer = null
+
   function foldName(name) {
     return String(name || '')
       .toLowerCase()
@@ -68,16 +71,54 @@
       .replace(/"/g, '&quot;')
   }
 
-  function render(products) {
+  function productHaystack(p) {
+    return foldName(
+      [p.name, p.presentationName, p.description].filter(Boolean).join(' ')
+    )
+  }
+
+  function filterProducts(query) {
+    var q = foldName(query).trim()
+    if (!q) return allProducts.slice()
+    var tokens = q.split(/\s+/).filter(Boolean)
+    return allProducts.filter(function (p) {
+      var hay = productHaystack(p)
+      for (var i = 0; i < tokens.length; i++) {
+        if (hay.indexOf(tokens[i]) === -1) return false
+      }
+      return true
+    })
+  }
+
+  function render(products, query) {
     var grid = document.getElementById('grid')
     var status = document.getElementById('status')
+    var meta = document.getElementById('search-meta')
     if (!grid || !status) return
 
-    if (!products || !products.length) {
+    var q = String(query || '').trim()
+
+    if (!allProducts.length) {
+      status.className = 'shelf__status'
       status.textContent = 'Hoy no hay productos publicados todavía.'
       status.hidden = false
       grid.hidden = true
       grid.innerHTML = ''
+      if (meta) meta.hidden = true
+      return
+    }
+
+    if (!products.length) {
+      status.className = 'shelf__status'
+      status.textContent =
+        'No encontramos nada para “' + q + '”. Probá con otra palabra.'
+      status.hidden = false
+      grid.hidden = true
+      grid.innerHTML = ''
+      if (meta) {
+        meta.hidden = false
+        meta.textContent = '0 resultados'
+      }
       return
     }
 
@@ -112,6 +153,57 @@
     grid.hidden = false
     status.hidden = true
     status.textContent = ''
+
+    if (meta) {
+      if (q) {
+        meta.hidden = false
+        meta.textContent =
+          products.length === 1
+            ? '1 resultado para “' + q + '”'
+            : products.length + ' resultados para “' + q + '”'
+      } else {
+        meta.hidden = true
+        meta.textContent = ''
+      }
+    }
+  }
+
+  function applySearch() {
+    var input = document.getElementById('menu-search')
+    var clearBtn = document.getElementById('menu-search-clear')
+    if (!input) return
+    var q = input.value
+    if (clearBtn) clearBtn.hidden = !String(q).trim()
+    render(filterProducts(q), q)
+  }
+
+  function bindSearch() {
+    var input = document.getElementById('menu-search')
+    var clearBtn = document.getElementById('menu-search-clear')
+    if (!input) return
+
+    input.disabled = false
+
+    input.addEventListener('input', function () {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(applySearch, 160)
+    })
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        input.value = ''
+        applySearch()
+        input.blur()
+      }
+    })
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        input.value = ''
+        applySearch()
+        input.focus()
+      })
+    }
   }
 
   function fail(msg) {
@@ -133,7 +225,9 @@
         var brand = document.querySelector('.hero__brand')
         if (brand && data.bakeryName) brand.textContent = data.bakeryName
         document.title = (data.bakeryName || 'Panadería Lela') + ' — Menú'
-        render(data.products || [])
+        allProducts = data.products || []
+        bindSearch()
+        applySearch()
       })
       .catch(function () {
         fail('No se pudo cargar el menú. Intentá de nuevo en un momento.')
