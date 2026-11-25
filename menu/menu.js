@@ -52,15 +52,8 @@
   }
 
   function money(n) {
-    var v = Number(n)
-    if (!isFinite(v)) v = 0
-    return (
-      '₡' +
-      v.toLocaleString('es-CR', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      })
-    )
+    var v = Math.round(Number(n) || 0)
+    return '₡' + String(v).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f')
   }
 
   function escapeHtml(s) {
@@ -138,8 +131,9 @@
         }
         el.addEventListener('click', toggle)
         el.addEventListener('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
+          var code = e.keyCode || e.which
+          if (code === 13 || code === 32) {
+            if (e.preventDefault) e.preventDefault()
             toggle()
           }
         })
@@ -212,7 +206,7 @@
         '<div class="flip__face flip__face--front card">' +
         '<div class="card__media"><img src="' +
         escapeHtml(img) +
-        '" alt="" loading="lazy" /></div>' +
+        '" alt="" /></div>' +
         '<div class="card__body">' +
         '<h3 class="card__name">' +
         escapeHtml(p.name) +
@@ -282,7 +276,8 @@
     })
 
     input.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') {
+      var code = e.keyCode || e.which
+      if (code === 27) {
         input.value = ''
         applySearch()
         input.blur()
@@ -366,21 +361,48 @@
   }
 
   function load() {
-    fetch('/api/public/menu', { credentials: 'same-origin' })
-      .then(function (res) {
-        if (!res.ok) throw new Error('http_' + res.status)
-        return res.json()
-      })
-      .then(function (data) {
-        if (!data || !data.ok) throw new Error('bad_payload')
-        applyBakery(data.bakery, data.bakeryName)
-        allProducts = data.products || []
-        bindSearch()
-        applySearch()
-      })
-      .catch(function () {
-        fail('No se pudo cargar el menú. Intentá de nuevo en un momento.')
-      })
+    /* XHR: fetch no existe en Safari iOS 9 (iPad 4). */
+    var req = new XMLHttpRequest()
+    var done = false
+    function finish(ok, data) {
+      if (done) return
+      done = true
+      if (!ok || !data || !data.ok) {
+        fail('No se pudo cargar el menú. Abrí http://IP-DE-LA-PC:3000/menu en Wi‑Fi.')
+        return
+      }
+      applyBakery(data.bakery, data.bakeryName)
+      allProducts = data.products || []
+      bindSearch()
+      applySearch()
+    }
+    req.open('GET', '/api/public/menu', true)
+    try {
+      req.timeout = 20000
+    } catch (e) {}
+    req.onreadystatechange = function () {
+      if (req.readyState !== 4) return
+      if (req.status < 200 || req.status >= 300) {
+        finish(false, null)
+        return
+      }
+      try {
+        finish(true, JSON.parse(req.responseText || 'null'))
+      } catch (err) {
+        finish(false, null)
+      }
+    }
+    req.onerror = function () {
+      finish(false, null)
+    }
+    req.ontimeout = function () {
+      finish(false, null)
+    }
+    try {
+      req.send(null)
+    } catch (e2) {
+      finish(false, null)
+    }
   }
 
   if (document.readyState === 'loading') {

@@ -313,12 +313,12 @@
       return
     }
     var html =
-      '<strong>iPad / tablet vieja: usá Wi‑Fi local (no el link trycloudflare)</strong>'
+      '<strong>iPad: abrí Wi‑Fi local (no trycloudflare)</strong>'
     if (onTunnel) {
       html +=
-        'Este túnel HTTPS no abre en iOS 9. En Safari del iPad abrí una de estas URLs (misma Wi‑Fi que la PC): '
+        'Caja y menú clientes solo por Wi‑Fi. Tocá: '
     } else {
-      html += 'Si otra tablet no carga el túnel, usá: '
+      html += 'Menú clientes: '
     }
     if (lans.length) {
       var i
@@ -330,9 +330,14 @@
           '">' +
           lans[i] +
           '</a>'
+        html +=
+          ' · <a href="' +
+          lans[i] +
+          'menu/">Menú /menu</a>'
       }
     } else {
-      html += 'http://IP-DE-LA-PC:3000/ (está en ipad-url.txt en la PC)'
+      html +=
+        '<a href="/menu/">/menu</a> · ver también ipad-url.txt en la PC'
     }
     box.innerHTML = html
     box.style.display = 'block'
