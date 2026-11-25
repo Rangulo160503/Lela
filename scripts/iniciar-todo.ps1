@@ -215,19 +215,32 @@ function Ensure-Node {
   return @{ Mode = 'portable' }
 }
 
+function Resolve-NpmCmd {
+  # Preferir npm del Node del sistema (Program Files). El portable solo si no hay otro.
+  # No usar cmd /c '"npm.cmd" ...' — esas comillas hacen que %~dp0 sea el cwd del
+  # proyecto y npm busque EB\node_modules\npm (MODULE_NOT_FOUND).
+  $sys = Get-Command npm.cmd -ErrorAction SilentlyContinue
+  if ($sys -and $sys.Source -and (Test-Path $sys.Source)) {
+    return $sys.Source
+  }
+  if (Test-Path $npmCmd) { return $npmCmd }
+  return 'npm.cmd'
+}
+
 function Invoke-Npm {
   param(
     [Parameter(Mandatory = $true)]
     [string[]]$NpmArguments
   )
-  $exe = if (Test-Path $npmCmd) { $npmCmd } else { 'npm.cmd' }
+  $exe = Resolve-NpmCmd
   Write-Host ("  > npm " + ($NpmArguments -join ' '))
-  # Argumentos por separado (no un solo string); npm.cmd via cmd evita rarezas de PS
-  $quoted = ($NpmArguments | ForEach-Object {
-      if ($_ -match '[\s"]') { '"' + ($_ -replace '"', '\"') + '"' } else { $_ }
-    }) -join ' '
-  cmd.exe /c "`"$exe`" $quoted"
-  if ($LASTEXITCODE -ne 0) {
+  Write-Host ("  (usando $exe)")
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  & $exe @NpmArguments
+  $code = $LASTEXITCODE
+  $ErrorActionPreference = $prev
+  if ($code -ne 0) {
     throw "npm fallo: $($NpmArguments -join ' ')"
   }
 }
