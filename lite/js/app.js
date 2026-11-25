@@ -11,6 +11,7 @@
     { id: 'suppliers', label: 'Proveedores', hash: '#/cfg/suppliers' },
     { id: 'proposals', label: 'Aprobaciones', hash: '#/cfg/proposals' },
     { id: 'users', label: 'Usuarios', hash: '#/cfg/users' },
+    { id: 'bakery', label: 'Menú público', hash: '#/cfg/bakery' },
     { id: 'printer', label: 'Impresora', hash: '#/cfg/printer' },
     { id: 'backups', label: 'Respaldos', hash: '#/cfg/backups' },
   ]
@@ -226,6 +227,7 @@
       else if (hash === '#/cfg/suppliers') screen = screens.suppliers
       else if (hash === '#/cfg/proposals') screen = screens.proposals
       else if (hash === '#/cfg/users') screen = screens.users
+      else if (hash === '#/cfg/bakery') screen = screens.bakery
       else if (hash === '#/cfg/printer') screen = screens.printer
       else if (hash === '#/cfg/backups') screen = screens.backups
 

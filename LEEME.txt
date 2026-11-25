@@ -15,7 +15,9 @@ OPCION A — ZIP / carpeta en la PC de la panaderia
    Empleados (caja):  http://127.0.0.1:3000/
      Facturar · Saldos · Gastos · Cierre
    Clientes (vitrina): http://127.0.0.1:3000/menu
-     Solo productos (foto, nombre, precio). Sin login.
+     Productos + datos de la panaderia. Sin login.
+   Datos de la vitrina (nombre, horario, telefono…):
+     Config → Menú público (admin).
    Con el tunel: agregue /menu al final del link para clientes.
 4) Para apagar:  Detener.bat
 

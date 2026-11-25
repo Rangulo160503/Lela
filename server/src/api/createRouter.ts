@@ -26,11 +26,20 @@ export function createRouter(flujo: IAppFlujo, mvp: MvpFlujo): Router {
 
   /** Vitrina de clientes — sin login */
   router.get('/public/menu', (_req, res) => {
+    const bakery = mvp.getBakeryPublicInfo()
     res.json({
       ok: true,
-      bakeryName: 'Panadería Lela',
+      bakeryName: bakery.name,
+      bakery,
       products: mvp.listPublicMenu(),
     })
+  })
+
+  router.get('/bakery-public', requireAdmin, (_req, res) => {
+    res.json({ ok: true, bakery: mvp.getBakeryPublicInfo() })
+  })
+  router.post('/bakery-public', requireAdmin, (req, res) => {
+    res.json(mvp.saveBakeryPublicInfo(req.body ?? {}))
   })
 
   router.post('/auth/login', (req, res) => {

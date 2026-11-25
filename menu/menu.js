@@ -214,6 +214,65 @@
     status.hidden = false
   }
 
+  function setText(id, text, hideIfEmpty) {
+    var el = document.getElementById(id)
+    if (!el) return false
+    var t = String(text || '').trim()
+    el.textContent = t
+    if (hideIfEmpty) el.hidden = !t
+    return !!t
+  }
+
+  function setRow(rowId, valueId, text) {
+    var row = document.getElementById(rowId)
+    var valEl = document.getElementById(valueId)
+    if (!row || !valEl) return false
+    var t = String(text || '').trim()
+    valEl.textContent = t
+    row.hidden = !t
+    return !!t
+  }
+
+  function applyBakery(bakery, bakeryName) {
+    var b = bakery || {}
+    var name = String(b.name || bakeryName || 'Panadería Lela').trim()
+    setText('hero-brand', name, false)
+    setText('hero-eyebrow', b.eyebrow || 'Desde el horno', false)
+    setText(
+      'hero-lede',
+      b.tagline || 'El sabor de cada día, listo para servir.',
+      false
+    )
+    setText('foot-brand', name, false)
+    document.title = name + ' — Menú'
+
+    var hasAddress = setRow('info-address-row', 'info-address', b.address)
+    var hasPhone = setRow('info-phone-row', 'info-phone', b.phone)
+    var hasHours = setRow('info-hours-row', 'info-hours', b.hours)
+    var hasNote = setText('info-note', b.note, true)
+    setText('foot-note', b.note, true)
+
+    var info = document.getElementById('bakery-info')
+    if (info) {
+      info.hidden = !(hasAddress || hasPhone || hasHours || hasNote)
+    }
+
+    if (hasPhone) {
+      var phoneEl = document.getElementById('info-phone')
+      if (phoneEl) {
+        var tel = String(b.phone || '').replace(/[^\d+]/g, '')
+        if (tel) {
+          phoneEl.innerHTML =
+            '<a href="tel:' +
+            escapeHtml(tel) +
+            '">' +
+            escapeHtml(b.phone) +
+            '</a>'
+        }
+      }
+    }
+  }
+
   function load() {
     fetch('/api/public/menu', { credentials: 'same-origin' })
       .then(function (res) {
@@ -222,9 +281,7 @@
       })
       .then(function (data) {
         if (!data || !data.ok) throw new Error('bad_payload')
-        var brand = document.querySelector('.hero__brand')
-        if (brand && data.bakeryName) brand.textContent = data.bakeryName
-        document.title = (data.bakeryName || 'Panadería Lela') + ' — Menú'
+        applyBakery(data.bakery, data.bakeryName)
         allProducts = data.products || []
         bindSearch()
         applySearch()

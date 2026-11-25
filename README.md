@@ -78,7 +78,7 @@ Paleta artesanal (crema, café, terracota). Tipografías autoalojadas: **Fraunce
 
 - **UI principal = React** (`npm run build:web` → `dist/`). Abrí `http://IP:3000/` — Facturación (Nueva venta), Inventario, Cierre, Dashboard, Config. Es la versión del criterio del cliente.
 - **UI por defecto (`/`):** `lite/` — Facturar · Saldos de inventario · **Gastos** (foto de factura o manual) · Cierre. iPad 4 / iOS 9 incluidos. Auth por `?token=` en Safari viejo.
-- **Vitrina clientes (`/menu`):** página pública (sin login) con productos activos — foto, nombre, precio. API: `GET /api/public/menu`. Dominio propio: después.
+- **Vitrina clientes (`/menu`):** página pública (sin login) con productos activos — foto, nombre, precio — y datos de la panadería. API: `GET /api/public/menu`. Edición en vivo: Config → **Menú público** (`GET/POST /api/bakery-public`). Dominio propio: después.
 - **React opcional:** `http://IP:3000/react`
 - Preferí Wi‑Fi LAN antes que el túnel en tablets viejas.
 

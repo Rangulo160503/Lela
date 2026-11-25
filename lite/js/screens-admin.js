@@ -1644,7 +1644,92 @@
     })
   }
 
-  /* ---------- 10. Printer ---------- */
+  /* ---------- 10. Menú público (datos panadería) ---------- */
+  Lela.screens.bakery = function (main) {
+    setHtml(
+      main,
+      toolbar('Menú público') + '<p class="empty">Cargando…</p>'
+    )
+    Lela.get('/bakery-public', function (data) {
+      if (!data || data.ok === false) {
+        setHtml(
+          main,
+          toolbar('Menú público') + emptyMsg('No se pudo cargar.')
+        )
+        return
+      }
+      var b = data.bakery || {}
+      var html =
+        toolbar('Menú público') +
+        '<p class="hint">Estos datos se ven en la vitrina de clientes (/menu). Guardá y abrí la vitrina para verlos.</p>' +
+        '<label class="field"><span>Nombre</span>' +
+        '<input id="f-bakery-name" type="text" value="' +
+        esc(b.name || '') +
+        '" autocomplete="organization" /></label>' +
+        '<label class="field"><span>Frase corta (arriba)</span>' +
+        '<input id="f-bakery-eyebrow" type="text" value="' +
+        esc(b.eyebrow || '') +
+        '" /></label>' +
+        '<label class="field"><span>Descripción / lema</span>' +
+        '<textarea id="f-bakery-tagline" rows="2">' +
+        esc(b.tagline || '') +
+        '</textarea></label>' +
+        '<label class="field"><span>Dirección</span>' +
+        '<input id="f-bakery-address" type="text" value="' +
+        esc(b.address || '') +
+        '" autocomplete="street-address" /></label>' +
+        '<label class="field"><span>Teléfono</span>' +
+        '<input id="f-bakery-phone" type="tel" value="' +
+        esc(b.phone || '') +
+        '" autocomplete="tel" /></label>' +
+        '<label class="field"><span>Horario</span>' +
+        '<input id="f-bakery-hours" type="text" value="' +
+        esc(b.hours || '') +
+        '" placeholder="Ej. Lun–Sáb 6:00–18:00" /></label>' +
+        '<label class="field"><span>Nota al pie</span>' +
+        '<textarea id="f-bakery-note" rows="2" placeholder="Opcional">' +
+        esc(b.note || '') +
+        '</textarea></label>' +
+        '<div class="admin-form__actions" style="display:grid;gap:0.6rem;margin-top:0.75rem">' +
+        '<button type="button" class="btn btn-primary btn-block" id="f-save-bakery">Guardar</button>' +
+        '<button type="button" class="btn btn-secondary btn-block" id="f-open-menu">Abrir vitrina</button>' +
+        '</div>'
+      setHtml(main, html)
+
+      var save = Lela.$('f-save-bakery')
+      if (save) {
+        save.onclick = function () {
+          Lela.post(
+            '/bakery-public',
+            {
+              name: val('f-bakery-name'),
+              eyebrow: val('f-bakery-eyebrow'),
+              tagline: val('f-bakery-tagline'),
+              address: val('f-bakery-address'),
+              phone: val('f-bakery-phone'),
+              hours: val('f-bakery-hours'),
+              note: val('f-bakery-note'),
+            },
+            function (res) {
+              if (!res || res.ok === false) {
+                Lela.toast((res && res.error) || 'No se pudo guardar', 'err')
+                return
+              }
+              Lela.toast('Datos del menú guardados', 'ok')
+            }
+          )
+        }
+      }
+      var openBtn = Lela.$('f-open-menu')
+      if (openBtn) {
+        openBtn.onclick = function () {
+          window.open('/menu', '_blank')
+        }
+      }
+    })
+  }
+
+  /* ---------- 11. Printer ---------- */
   Lela.screens.printer = function (main) {
     setHtml(main, toolbar('Impresora') + '<p class="empty">Cargando…</p>')
     Lela.get('/printer', function (data) {
@@ -1715,7 +1800,7 @@
     })
   }
 
-  /* ---------- 11. Backups ---------- */
+  /* ---------- 12. Backups ---------- */
   Lela.screens.backups = function (main) {
     setHtml(main, toolbar('Respaldos') + '<p class="empty">Cargando…</p>')
     Lela.get('/backups', function (data) {

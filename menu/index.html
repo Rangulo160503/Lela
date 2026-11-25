@@ -8,7 +8,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>Panadería Lela</title>
   <link rel="icon" href="/favicon.svg" />
-  <link rel="stylesheet" href="/menu/menu.css?v=2" />
+  <link rel="stylesheet" href="/menu/menu.css?v=3" />
 </head>
 <body>
   <header class="hero">
@@ -17,11 +17,32 @@
       <div class="hero__veil"></div>
     </div>
     <div class="hero__copy">
-      <p class="hero__eyebrow">Desde el horno</p>
-      <h1 class="hero__brand">Panadería Lela</h1>
-      <p class="hero__lede">El sabor de cada día, listo para servir.</p>
+      <p id="hero-eyebrow" class="hero__eyebrow">Desde el horno</p>
+      <h1 id="hero-brand" class="hero__brand">Panadería Lela</h1>
+      <p id="hero-lede" class="hero__lede">El sabor de cada día, listo para servir.</p>
     </div>
   </header>
+
+  <section id="bakery-info" class="bakery-info" hidden>
+    <div class="bakery-info__inner">
+      <h2 class="bakery-info__title">Visitanos</h2>
+      <dl class="bakery-info__list">
+        <div id="info-address-row" class="bakery-info__row" hidden>
+          <dt>Dirección</dt>
+          <dd id="info-address"></dd>
+        </div>
+        <div id="info-phone-row" class="bakery-info__row" hidden>
+          <dt>Teléfono</dt>
+          <dd id="info-phone"></dd>
+        </div>
+        <div id="info-hours-row" class="bakery-info__row" hidden>
+          <dt>Horario</dt>
+          <dd id="info-hours"></dd>
+        </div>
+      </dl>
+      <p id="info-note" class="bakery-info__note" hidden></p>
+    </div>
+  </section>
 
   <div class="search-bar" role="search">
     <label class="search-bar__label visually-hidden" for="menu-search">Buscar producto</label>
@@ -56,9 +77,10 @@
   </main>
 
   <footer class="foot">
-    <p class="foot__brand">Panadería Lela</p>
+    <p id="foot-brand" class="foot__brand">Panadería Lela</p>
+    <p id="foot-note" class="foot__note" hidden></p>
   </footer>
 
-  <script src="/menu/menu.js?v=2"></script>
+  <script src="/menu/menu.js?v=3"></script>
 </body>
 </html>

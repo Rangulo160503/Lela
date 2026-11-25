@@ -16,6 +16,11 @@ import {
   printText,
   savePrinterSettings,
 } from '../servicios/printService.js'
+import {
+  getBakeryPublic,
+  saveBakeryPublic,
+  type BakeryPublicInfo,
+} from '../servicios/bakeryPublic.js'
 import type { RegisteredSale } from '../reglas/types.js'
 import { registerMerma } from '../reglas/registerMerma.js'
 import type { ProductsRepo } from '../da/repositories/productsRepo.js'
@@ -1793,6 +1798,15 @@ export function createMvpFlujo(deps: {
     savePrinter(settings: { printerName: string; paperChars: number }) {
       savePrinterSettings(deps.db, settings)
       return { ok: true as const }
+    },
+
+    getBakeryPublicInfo() {
+      return getBakeryPublic(deps.db)
+    },
+
+    saveBakeryPublicInfo(input: Partial<BakeryPublicInfo>) {
+      const bakery = saveBakeryPublic(deps.db, input)
+      return { ok: true as const, bakery }
     },
 
     async printSale(saleId: string) {
