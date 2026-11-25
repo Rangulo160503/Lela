@@ -72,9 +72,79 @@
   }
 
   function productHaystack(p) {
+    var extra = Array.isArray(p.ingredients) ? p.ingredients.join(' ') : ''
     return foldName(
-      [p.name, p.presentationName, p.description].filter(Boolean).join(' ')
+      [p.name, p.presentationName, p.description, extra]
+        .filter(Boolean)
+        .join(' ')
     )
+  }
+
+  function renderIngredients(list) {
+    if (!list || !list.length) {
+      return '<p class="card__empty">Sin ingredientes publicados aún.</p>'
+    }
+    var html = '<p class="card__section">Ingredientes</p><ul class="card__ingredients">'
+    for (var i = 0; i < list.length; i++) {
+      html += '<li>' + escapeHtml(list[i]) + '</li>'
+    }
+    html += '</ul>'
+    return html
+  }
+
+  function renderNutrition(n) {
+    if (!n) {
+      return '<p class="card__empty">Sin tabla nutricional aún.</p>'
+    }
+    return (
+      '<p class="card__section">Tabla nutricional</p>' +
+      '<p class="card__portion">' +
+      escapeHtml(n.portion || 'Por porción') +
+      '</p>' +
+      '<table class="card__nutrition"><tbody>' +
+      '<tr><th>Energía</th><td>' +
+      escapeHtml(n.kcal) +
+      ' kcal</td></tr>' +
+      '<tr><th>Proteínas</th><td>' +
+      escapeHtml(n.protein) +
+      ' g</td></tr>' +
+      '<tr><th>Carbohidratos</th><td>' +
+      escapeHtml(n.carbs) +
+      ' g</td></tr>' +
+      '<tr><th>Grasas</th><td>' +
+      escapeHtml(n.fat) +
+      ' g</td></tr>' +
+      '<tr><th>Fibra</th><td>' +
+      escapeHtml(n.fiber) +
+      ' g</td></tr>' +
+      '<tr><th>Sodio</th><td>' +
+      escapeHtml(n.sodium) +
+      ' mg</td></tr>' +
+      '</tbody></table>' +
+      '<p class="card__disclaimer">Valores de ejemplo / referencia.</p>'
+    )
+  }
+
+  function bindFlips(grid) {
+    var cards = grid.querySelectorAll('.flip--interactive')
+    for (var i = 0; i < cards.length; i++) {
+      ;(function (el) {
+        el.setAttribute('tabindex', '0')
+        el.setAttribute('role', 'button')
+        el.setAttribute('aria-pressed', 'false')
+        function toggle() {
+          var on = el.classList.toggle('is-flipped')
+          el.setAttribute('aria-pressed', on ? 'true' : 'false')
+        }
+        el.addEventListener('click', toggle)
+        el.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            toggle()
+          }
+        })
+      })(cards[i])
+    }
   }
 
   function filterProducts(query) {
@@ -128,10 +198,18 @@
       var img = productImage(p)
       var desc = (p.description || '').trim()
       var present = (p.presentationName || '').trim()
+      var ingredients = Array.isArray(p.ingredients) ? p.ingredients : []
+      var nutrition = p.nutrition || null
+      var hasDetail = ingredients.length > 0 || !!nutrition
+
       html +=
-        '<article class="card" style="animation-delay:' +
+        '<article class="flip' +
+        (hasDetail ? ' flip--interactive' : '') +
+        '" style="animation-delay:' +
         Math.min(i * 0.04, 0.4) +
         's">' +
+        '<div class="flip__inner">' +
+        '<div class="flip__face flip__face--front card">' +
         '<div class="card__media"><img src="' +
         escapeHtml(img) +
         '" alt="" loading="lazy" /></div>' +
@@ -146,10 +224,24 @@
         '<p class="card__price">' +
         money(p.unitPrice) +
         '</p>' +
+        (hasDetail
+          ? '<p class="card__hint">Tocá para ver ingredientes y nutrición</p>'
+          : '') +
+        '</div></div>' +
+        '<div class="flip__face flip__face--back card card--back">' +
+        '<div class="card__back-body">' +
+        '<h3 class="card__name">' +
+        escapeHtml(p.name) +
+        '</h3>' +
+        renderIngredients(ingredients) +
+        renderNutrition(nutrition) +
+        '<p class="card__hint">Tocá para volver</p>' +
+        '</div></div>' +
         '</div></article>'
     }
 
     grid.innerHTML = html
+    bindFlips(grid)
     grid.hidden = false
     status.hidden = true
     status.textContent = ''

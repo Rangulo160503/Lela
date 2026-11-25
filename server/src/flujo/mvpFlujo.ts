@@ -240,10 +240,11 @@ export function createMvpFlujo(deps: {
 
     /** Catálogo público (vitrina): sin stock ni flags internos. */
     listPublicMenu() {
-      return deps.db
+      const rows = deps.db
         .prepare(
           `SELECT id, name, unit_price as unitPrice,
-                  description, presentation_name as presentationName, photo_path as photoPath
+                  description, presentation_name as presentationName, photo_path as photoPath,
+                  ingredients_public as ingredientsPublic, nutrition_json as nutritionJson
            FROM products
            WHERE active = 1
            ORDER BY name COLLATE NOCASE`,
@@ -255,7 +256,42 @@ export function createMvpFlujo(deps: {
           description: string | null
           presentationName: string | null
           photoPath: string | null
+          ingredientsPublic: string | null
+          nutritionJson: string | null
         }>
+
+      return rows.map((row) => {
+        const ingredients = String(row.ingredientsPublic || '')
+          .split(/,|\n/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+        let nutrition: {
+          portion: string
+          kcal: number
+          protein: number
+          carbs: number
+          fat: number
+          fiber: number
+          sodium: number
+        } | null = null
+        if (row.nutritionJson) {
+          try {
+            nutrition = JSON.parse(row.nutritionJson)
+          } catch {
+            nutrition = null
+          }
+        }
+        return {
+          id: row.id,
+          name: row.name,
+          unitPrice: row.unitPrice,
+          description: row.description,
+          presentationName: row.presentationName,
+          photoPath: row.photoPath,
+          ingredients,
+          nutrition,
+        }
+      })
     },
 
     listRawMaterials() {

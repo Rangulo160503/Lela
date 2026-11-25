@@ -2,9 +2,11 @@ import type { AppDatabase } from '../da/db.js'
 import type { ProductsRepo } from '../da/repositories/productsRepo.js'
 import { hashPin } from './cryptoAuth.js'
 import { SEED_PRODUCTS, seedIfEmpty } from './seed.js'
+import { seedPublicProductDetails } from './seedPublicProductDetails.js'
 
 export function seedMvp(db: AppDatabase, products: ProductsRepo): void {
   seedIfEmpty(products)
+  seedPublicProductDetails(db)
 
   const userCount = (
     db.prepare('SELECT COUNT(*) AS n FROM users').get() as { n: number }
