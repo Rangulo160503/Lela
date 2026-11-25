@@ -3,48 +3,54 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#3D2B1F" />
+  <meta name="theme-color" content="#2a1c14" />
   <meta name="description" content="Panadería Lela — pan y repostería del día." />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>Panadería Lela</title>
   <link rel="icon" href="/favicon.svg" />
-  <link rel="stylesheet" href="/menu/menu.css?v=3" />
+  <link rel="stylesheet" href="/menu/menu.css?v=4" />
 </head>
 <body>
   <header class="hero">
     <div class="hero__media" aria-hidden="true">
       <img class="hero__photo" src="/images/hero-bakery.jpg" alt="" />
       <div class="hero__veil"></div>
+      <div class="hero__grain"></div>
     </div>
     <div class="hero__copy">
       <p id="hero-eyebrow" class="hero__eyebrow">Desde el horno</p>
       <h1 id="hero-brand" class="hero__brand">Panadería Lela</h1>
       <p id="hero-lede" class="hero__lede">El sabor de cada día, listo para servir.</p>
+      <a class="hero__cta" href="#carta">Ver la carta</a>
     </div>
+    <a class="hero__scroll" href="#carta" aria-label="Bajar a la carta">
+      <span></span>
+    </a>
   </header>
 
   <section id="bakery-info" class="bakery-info" hidden>
     <div class="bakery-info__inner">
+      <p class="bakery-info__kicker">La panadería</p>
       <h2 class="bakery-info__title">Visitanos</h2>
-      <dl class="bakery-info__list">
-        <div id="info-address-row" class="bakery-info__row" hidden>
-          <dt>Dirección</dt>
-          <dd id="info-address"></dd>
+      <div class="bakery-info__grid">
+        <div id="info-address-row" class="bakery-info__card" hidden>
+          <span class="bakery-info__label">Dirección</span>
+          <p id="info-address" class="bakery-info__value"></p>
         </div>
-        <div id="info-phone-row" class="bakery-info__row" hidden>
-          <dt>Teléfono</dt>
-          <dd id="info-phone"></dd>
+        <div id="info-phone-row" class="bakery-info__card" hidden>
+          <span class="bakery-info__label">Teléfono</span>
+          <p id="info-phone" class="bakery-info__value"></p>
         </div>
-        <div id="info-hours-row" class="bakery-info__row" hidden>
-          <dt>Horario</dt>
-          <dd id="info-hours"></dd>
+        <div id="info-hours-row" class="bakery-info__card" hidden>
+          <span class="bakery-info__label">Horario</span>
+          <p id="info-hours" class="bakery-info__value"></p>
         </div>
-      </dl>
+      </div>
       <p id="info-note" class="bakery-info__note" hidden></p>
     </div>
   </section>
 
-  <div class="search-bar" role="search">
+  <div id="carta" class="search-bar" role="search">
     <label class="search-bar__label visually-hidden" for="menu-search">Buscar producto</label>
     <div class="search-bar__field">
       <svg class="search-bar__icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
@@ -68,6 +74,7 @@
 
   <main class="shelf">
     <header class="shelf__head">
+      <p class="shelf__kicker">Carta del día</p>
       <h2 class="shelf__title">Nuestro pan y repostería</h2>
       <p class="shelf__hint">Precios en colones. Sujeto a disponibilidad del día.</p>
       <p id="search-meta" class="shelf__meta" hidden></p>
@@ -81,6 +88,6 @@
     <p id="foot-note" class="foot__note" hidden></p>
   </footer>
 
-  <script src="/menu/menu.js?v=3"></script>
+  <script src="/menu/menu.js?v=4"></script>
 </body>
 </html>
