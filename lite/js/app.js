@@ -298,63 +298,6 @@
     })
   }
 
-  function paintLanBanner(info) {
-    var box = $('login-lan-banner')
-    if (!box) return
-    var host = ''
-    try {
-      host = String(location.hostname || '')
-    } catch (e) {}
-    var onTunnel = host.indexOf('trycloudflare.com') >= 0
-    var lans = (info && info.lan) || []
-    if (!onTunnel && !lans.length) {
-      box.style.display = 'none'
-      box.innerHTML = ''
-      return
-    }
-    var html =
-      '<strong>iPad: abrí Wi‑Fi local (no trycloudflare)</strong>'
-    if (onTunnel) {
-      html +=
-        'Caja y menú clientes solo por Wi‑Fi. Tocá: '
-    } else {
-      html += 'Menú clientes: '
-    }
-    if (lans.length) {
-      var i
-      for (i = 0; i < lans.length; i++) {
-        if (i) html += ' · '
-        html +=
-          '<a href="' +
-          lans[i] +
-          '">' +
-          lans[i] +
-          '</a>'
-        html +=
-          ' · <a href="' +
-          lans[i] +
-          'menu/">Menú /menu</a>'
-      }
-    } else {
-      html +=
-        '<a href="/menu/">/menu</a> · ver también ipad-url.txt en la PC'
-    }
-    box.innerHTML = html
-    box.style.display = 'block'
-  }
-
-  function loadAccessHint() {
-    /* Silencioso: si el endpoint no existe aún, no mostrar errores. */
-    try {
-      Lela.get('/public/access', function (data) {
-        if (data && data.ok) paintLanBanner(data)
-        else paintLanBanner(null)
-      })
-    } catch (e) {
-      paintLanBanner(null)
-    }
-  }
-
   function doLogout() {
     Lela.post('/auth/logout', {}, function () {
       Lela.clearToken()
@@ -387,10 +330,6 @@
     } else {
       window.onhashchange = route
     }
-
-    try {
-      loadAccessHint()
-    } catch (eHint) {}
 
     var token = Lela.getToken()
     if (!token) {

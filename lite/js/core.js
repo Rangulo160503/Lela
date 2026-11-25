@@ -38,15 +38,15 @@
     return '₡' + String(v).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f')
   }
 
-  /** Nunca mostrar códigos técnicos (bad_json, unauthorized, …) al usuario. */
+  /** Mensajes simples para la gente de la panadería (sin códigos técnicos). */
   function friendlyError(code, fallback) {
     var c = String(code || '')
-    if (c === 'bad_json') return 'El servidor no respondió bien. Recargá o usá Wi‑Fi local.'
-    if (c === 'network') return 'Sin conexión con el servidor.'
-    if (c === 'timeout') return 'El servidor no respondió. Probá de nuevo.'
+    if (c === 'bad_json' || c === 'network' || c === 'timeout') {
+      return 'No se pudo conectar. Probá de nuevo.'
+    }
     if (c === 'unauthorized') return 'Sesión expirada. Entrá de nuevo.'
     if (c === 'opening_cash_required') {
-      return 'Indicá el monto de apertura (efectivo en caja).'
+      return 'Indicá el monto de apertura.'
     }
     if (c === 'already_open') return 'Ya hay un turno abierto.'
     if (c === 'not_open') return 'No hay turno abierto.'
@@ -54,7 +54,6 @@
     if (!c || c === 'null' || c === 'undefined') {
       return fallback || 'No se pudo completar.'
     }
-    /* Si parece código técnico (snake_case / camel sin espacios), mensaje genérico */
     if (/^[a-z0-9_]+$/i.test(c) && c.indexOf(' ') < 0 && c.length < 40) {
       return fallback || 'No se pudo completar. Probá de nuevo.'
     }

@@ -498,25 +498,6 @@ table.data input, table.data select {
   flex-direction: column !important;
   min-height: 100vh !important;
 }
-.login-lan-banner {
-  -webkit-flex-shrink: 0 !important;
-  flex-shrink: 0 !important;
-  padding: 0.85rem 1rem !important;
-  background: #7a1f16 !important;
-  color: #fff7f0 !important;
-  font-size: 0.92rem !important;
-  line-height: 1.35 !important;
-  text-align: left !important;
-}
-.login-lan-banner a {
-  color: #fff !important;
-  font-weight: 700 !important;
-  word-break: break-all !important;
-}
-.login-lan-banner strong {
-  display: block !important;
-  margin-bottom: 0.35rem !important;
-}
 .login-editorial__visual {
   position: relative !important;
   /* iPad: hero abajo y compacto; el login queda arriba */
@@ -684,13 +665,6 @@ table.data input, table.data select {
   .login-editorial {
     -webkit-flex-direction: row !important;
     flex-direction: row !important;
-  }
-  .login-lan-banner {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    z-index: 5 !important;
   }
   .login-editorial__visual {
     -webkit-order: 1 !important;

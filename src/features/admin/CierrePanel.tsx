@@ -81,7 +81,7 @@ type CierrePanelProps = {
 
 function openingCashMessage(error?: string) {
   if (error === 'opening_cash_required') {
-    return 'Indicá el monto de apertura (efectivo en caja).'
+    return 'Indicá el monto de apertura.'
   }
   if (error === 'already_open') return 'Ya hay un turno abierto.'
   if (error === 'not_open') return 'No hay turno abierto.'
@@ -306,9 +306,7 @@ export function CierrePanel({
                 {openShift.expectedCash != null
                   ? `Registrado ${formatMoney(openShift.expectedCash)}`
                   : 'Sin monto registrado'}
-                {canEditOpening
-                  ? '. Podés corregirlo si se abrió mal.'
-                  : '. Si está mal, pedile a un admin que lo corrija.'}
+                {canEditOpening ? '. Podés corregirlo si hace falta.' : ''}
               </p>
               {canEditOpening ? (
                 <div

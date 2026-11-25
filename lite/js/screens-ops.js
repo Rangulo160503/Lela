@@ -1284,21 +1284,6 @@
         )
       }
       card.appendChild(save)
-      card.appendChild(
-        el(
-          'p',
-          'hint',
-          'Solo admin/principal puede corregir el fondo con el que se abrió.'
-        )
-      )
-    } else {
-      card.appendChild(
-        el(
-          'p',
-          'hint',
-          'Si el monto está mal, pedile a un admin que lo corrija.'
-        )
-      )
     }
     host.appendChild(card)
   }

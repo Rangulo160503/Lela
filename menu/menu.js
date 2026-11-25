@@ -368,7 +368,7 @@
       if (done) return
       done = true
       if (!ok || !data || !data.ok) {
-        fail('No se pudo cargar el menú. Abrí http://IP-DE-LA-PC:3000/menu en Wi‑Fi.')
+        fail('No se pudo cargar el menú. Probá de nuevo en un momento.')
         return
       }
       applyBakery(data.bakery, data.bakeryName)

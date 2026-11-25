@@ -3,7 +3,7 @@ import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { Router, type Response } from 'express'
 import type { IAppFlujo } from '../abstracciones/ports.js'
-import { DATA_DIR, PORT, getLanAddresses } from '../config.js'
+import { DATA_DIR } from '../config.js'
 import type { MvpFlujo } from '../flujo/mvpFlujo.js'
 import { subscribe } from '../servicios/eventBus.js'
 import {
@@ -22,19 +22,6 @@ export function createRouter(flujo: IAppFlujo, mvp: MvpFlujo): Router {
 
   router.get('/health', (_req, res) => {
     res.json(flujo.getSystemInfo())
-  })
-
-  /** URLs de acceso — sin login (iPad viejo debe usar LAN HTTP, no el túnel). */
-  router.get('/public/access', (_req, res) => {
-    const lans = getLanAddresses()
-    res.json({
-      ok: true,
-      port: PORT,
-      local: `http://127.0.0.1:${PORT}/`,
-      lan: lans.map((ip) => `http://${ip}:${PORT}/`),
-      hintIpad:
-        'iPad / iOS 9: abrí la URL de Wi‑Fi local (http://…), no el link trycloudflare.',
-    })
   })
 
   /** Vitrina de clientes — sin login */
