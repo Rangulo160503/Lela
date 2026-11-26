@@ -215,6 +215,7 @@
 
     var ov = el('div', 'pos-overlay')
     ov.id = 'pos-overlay'
+    var modal = el('div', 'pos-modal')
 
     var head = el('div', 'pos-overlay__head')
     var titleWrap = el('div', null)
@@ -262,35 +263,28 @@
     }
     headActs.appendChild(closeBtn)
     head.appendChild(headActs)
-    ov.appendChild(head)
+    modal.appendChild(head)
 
     var body = el('div', 'pos-overlay__body')
 
     if (posStep === 'catalog') {
-      var searchRow = el('div', 'field')
-      searchRow.appendChild(el('span', 'field__label', 'Buscar'))
+      var searchRow = el('div', 'field pos-search')
       var search = document.createElement('input')
-      search.type = 'text'
+      search.type = 'search'
       search.className = 'field__input'
-      search.placeholder = 'Nombre del producto…'
+      search.placeholder = 'Buscar por nombre…'
       search.value = posFilter
       search.id = 'pos-search'
-      var filterBtn = el('button', 'btn btn--secondary btn--block', 'Filtrar')
-      filterBtn.type = 'button'
-      filterBtn.style.marginTop = '0.5rem'
-      filterBtn.onclick = function () {
-        posFilter = search.value || ''
-        renderPosOverlay()
-      }
+      search.setAttribute('autocapitalize', 'off')
+      search.setAttribute('autocomplete', 'off')
       search.onkeydown = function (ev) {
         ev = ev || window.event
         if ((ev.keyCode || ev.which) === 13) {
-          posFilter = search.value || ''
-          renderPosOverlay()
+          if (ev.preventDefault) ev.preventDefault()
+          return false
         }
       }
       searchRow.appendChild(search)
-      searchRow.appendChild(filterBtn)
       body.appendChild(searchRow)
 
       if (promos.length) {
@@ -346,59 +340,74 @@
       var prodPanel = el('div', 'panel')
       prodPanel.appendChild(el('h2', 'h2', 'Productos'))
       var prodList = el('div', 'list')
-      var q = (posFilter || '').toLowerCase()
-      var shown = 0
-      var i
-      for (i = 0; i < products.length; i++) {
-        ;(function (p) {
-          var name = String(p.name || '')
-          if (q && name.toLowerCase().indexOf(q) === -1) return
-          shown++
-          var stock = stockOf(p)
-          var qty = posCart[p.id] || 0
-          var row = el('div', 'row row--line')
-          var thumb = el('div', 'row__thumb')
-          thumb.style.backgroundImage =
-            'url("' + Lela.productImage(p).replace(/"/g, '') + '")'
-          var left = document.createElement('div')
-          left.className = 'row__body'
-          left.appendChild(el('div', 'row__name', name))
-          left.appendChild(
-            el(
-              'div',
-              'row__meta',
-              Lela.money(p.unitPrice) +
-                ' · stock ' +
-                stock +
-                (qty ? ' · en carrito ' + qty : '')
+      prodList.id = 'pos-prod-list'
+
+      function paintPosProducts() {
+        prodList.innerHTML = ''
+        var q = (posFilter || '').toLowerCase()
+        var shown = 0
+        var i
+        for (i = 0; i < products.length; i++) {
+          ;(function (p) {
+            var name = String(p.name || '')
+            if (q && name.toLowerCase().indexOf(q) === -1) return
+            shown++
+            var stock = stockOf(p)
+            var qty = posCart[p.id] || 0
+            var row = el('div', 'row row--line')
+            var thumb = el('div', 'row__thumb')
+            thumb.style.backgroundImage =
+              'url("' + Lela.productImage(p).replace(/"/g, '') + '")'
+            var left = document.createElement('div')
+            left.className = 'row__body'
+            left.appendChild(el('div', 'row__name', name))
+            left.appendChild(
+              el(
+                'div',
+                'row__meta',
+                Lela.money(p.unitPrice) +
+                  ' · stock ' +
+                  stock +
+                  (qty ? ' · en carrito ' + qty : '')
+              )
             )
-          )
-          var act = el('div', 'row__act')
-          var minus = el('button', 'btn btn-sm btn-ghost', '−')
-          minus.type = 'button'
-          minus.onclick = function () {
-            setCartQty(p.id, (posCart[p.id] || 0) - 1)
-            posAmount = ''
-            renderPosOverlay()
-          }
-          var plus = el('button', 'btn btn-sm btn-secondary', '+')
-          plus.type = 'button'
-          plus.disabled = stock <= 0 || qty >= stock
-          plus.onclick = function () {
-            setCartQty(p.id, (posCart[p.id] || 0) + 1)
-            posAmount = ''
-            renderPosOverlay()
-          }
-          act.appendChild(minus)
-          act.appendChild(document.createTextNode(' '))
-          act.appendChild(plus)
-          row.appendChild(thumb)
-          row.appendChild(left)
-          row.appendChild(act)
-          prodList.appendChild(row)
-        })(products[i])
+            var act = el('div', 'row__act')
+            var minus = el('button', 'btn btn-sm btn-ghost', '−')
+            minus.type = 'button'
+            minus.onclick = function () {
+              setCartQty(p.id, (posCart[p.id] || 0) - 1)
+              posAmount = ''
+              renderPosOverlay()
+            }
+            var plus = el('button', 'btn btn-sm btn-secondary', '+')
+            plus.type = 'button'
+            plus.disabled = stock <= 0 || qty >= stock
+            plus.onclick = function () {
+              setCartQty(p.id, (posCart[p.id] || 0) + 1)
+              posAmount = ''
+              renderPosOverlay()
+            }
+            act.appendChild(minus)
+            act.appendChild(document.createTextNode(' '))
+            act.appendChild(plus)
+            row.appendChild(thumb)
+            row.appendChild(left)
+            row.appendChild(act)
+            prodList.appendChild(row)
+          })(products[i])
+        }
+        if (!shown) {
+          prodList.appendChild(el('div', 'row empty', 'Sin productos.'))
+        }
       }
-      if (!shown) prodList.appendChild(el('div', 'row empty', 'Sin productos.'))
+
+      function onPosSearch() {
+        posFilter = search.value || ''
+        paintPosProducts()
+      }
+      search.oninput = onPosSearch
+      search.onkeyup = onPosSearch
+      paintPosProducts()
       prodPanel.appendChild(prodList)
       body.appendChild(prodPanel)
     } else {
@@ -506,7 +515,7 @@
         posAmount = amountInp.value
         paintChange()
       }
-      cartPanel.appendChild(field('Monto pagado', amountInp))
+      cartPanel.appendChild(field('Paga con', amountInp))
       paintChange()
       cartPanel.appendChild(changeEl)
 
@@ -562,7 +571,8 @@
       body.appendChild(cartPanel)
     }
 
-    ov.appendChild(body)
+    modal.appendChild(body)
+    ov.appendChild(modal)
     document.body.appendChild(ov)
     try {
       document.body.style.overflow = 'hidden'
@@ -573,9 +583,10 @@
     closePosOverlay()
     var ov = el('div', 'pos-overlay')
     ov.id = 'pos-overlay'
+    var modal = el('div', 'pos-modal')
     var head = el('div', 'pos-overlay__head')
     head.appendChild(el('h2', 'pos-overlay__title', 'Venta registrada'))
-    ov.appendChild(head)
+    modal.appendChild(head)
     var body = el('div', 'pos-overlay__body')
     var panel = el('div', 'panel')
     panel.appendChild(
@@ -618,7 +629,8 @@
     panel.appendChild(again)
     panel.appendChild(done)
     body.appendChild(panel)
-    ov.appendChild(body)
+    modal.appendChild(body)
+    ov.appendChild(modal)
     document.body.appendChild(ov)
   }
 
@@ -723,21 +735,29 @@
   }
 
   function openProductDrawer(main, product) {
+    var editing = !!(product && product.id)
     var draft = {
-      id: product.id,
-      name: product.name || '',
-      unitPrice: Number(product.unitPrice) || 0,
-      physicalStock: stockOf(product),
-      photoPath: product.photoPath || Lela.productImage(product),
+      id: editing ? product.id : undefined,
+      name: editing ? product.name || '' : '',
+      unitPrice: editing ? Number(product.unitPrice) || 0 : 0,
+      physicalStock: editing ? stockOf(product) : 0,
+      photoPath: editing
+        ? product.photoPath || Lela.productImage(product)
+        : '',
+      presentationName: editing
+        ? product.presentationName || 'Unidad'
+        : 'Unidad',
     }
 
     function paint() {
-      var preview = draft.photoPath || Lela.productImage(draft)
+      var preview =
+        draft.photoPath ||
+        Lela.productImage({ name: draft.name || 'producto' })
       var body =
         '<label class="field"><span>Nombre</span>' +
         '<input id="inv-name" class="field__input" type="text" value="' +
         esc(draft.name) +
-        '" /></label>' +
+        '" placeholder="Ej. Manitas" /></label>' +
         '<div class="field-row">' +
         '<label class="field"><span>Precio</span>' +
         '<input id="inv-price" class="field__input" type="number" inputmode="decimal" value="' +
@@ -754,10 +774,19 @@
         '<button type="button" id="inv-photo-btn" class="btn btn-secondary btn-block">Cambiar foto</button>'
 
       var foot =
-        '<button type="button" id="inv-save" class="btn btn-primary">Guardar</button>' +
-        '<button type="button" id="inv-del" class="btn btn-danger">Eliminar</button>'
+        '<button type="button" id="inv-save" class="btn btn-primary">' +
+        (editing ? 'Guardar' : 'Crear producto') +
+        '</button>'
+      if (editing) {
+        foot +=
+          '<button type="button" id="inv-del" class="soft-link soft-link--muted">Eliminar del catálogo</button>'
+      }
 
-      Lela.openDrawer('Editar · ' + (draft.name || 'producto'), body, foot)
+      Lela.openDrawer(
+        editing ? 'Editar · ' + (draft.name || 'producto') : 'Nuevo producto',
+        body,
+        foot
+      )
 
       var nameEl = Lela.$('inv-name')
       var priceEl = Lela.$('inv-price')
@@ -793,6 +822,7 @@
           {
             id: draft.id,
             name: draft.name,
+            presentationName: draft.presentationName || 'Unidad',
             unitPrice: draft.unitPrice,
             physicalStock: draft.physicalStock,
             photoPath: draft.photoPath || undefined,
@@ -805,44 +835,53 @@
               return
             }
             Lela.closeDrawer()
-            Lela.toast('Producto actualizado', 'ok')
+            Lela.toast(
+              editing ? 'Producto actualizado' : 'Producto creado',
+              'ok'
+            )
             rerender(Lela.screens.inv, main)
           }
         )
       }
 
-      delBtn.onclick = function () {
-        readDraft()
-        Lela.confirmSoft(
-          {
-            title: '¿Eliminar producto?',
-            body: 'Se ocultará del catálogo.',
-            confirmLabel: 'Eliminar',
-            danger: true,
-          },
-          function () {
-            Lela.post(
-              '/admin/products',
-              {
-                id: draft.id,
-                name: draft.name || product.name,
-                unitPrice: draft.unitPrice,
-                physicalStock: draft.physicalStock,
-                photoPath: draft.photoPath || undefined,
-                active: false,
-              },
-              function (res) {
-                if (!res || !res.ok) {
-                  Lela.toast((res && res.error) || 'No se pudo eliminar', 'err')
-                  return
+      if (delBtn) {
+        delBtn.onclick = function () {
+          readDraft()
+          Lela.confirmSoft(
+            {
+              title: '¿Eliminar producto?',
+              body: 'Se ocultará del catálogo.',
+              confirmLabel: 'Eliminar',
+              danger: true,
+            },
+            function () {
+              Lela.post(
+                '/admin/products',
+                {
+                  id: draft.id,
+                  name: draft.name || (product && product.name) || '',
+                  presentationName: draft.presentationName || 'Unidad',
+                  unitPrice: draft.unitPrice,
+                  physicalStock: draft.physicalStock,
+                  photoPath: draft.photoPath || undefined,
+                  active: false,
+                },
+                function (res) {
+                  if (!res || !res.ok) {
+                    Lela.toast(
+                      (res && res.error) || 'No se pudo eliminar',
+                      'err'
+                    )
+                    return
+                  }
+                  Lela.closeDrawer()
+                  Lela.toast('Producto eliminado', 'ok')
+                  rerender(Lela.screens.inv, main)
                 }
-                Lela.closeDrawer()
-                Lela.toast('Producto eliminado', 'ok')
-                rerender(Lela.screens.inv, main)
-              }
-            )
-          }
-        )
+              )
+            }
+          )
+        }
       }
     }
 
@@ -977,6 +1016,8 @@
     })
   }
 
+  var invFilter = ''
+
   Lela.screens.inv = function (main) {
     main.innerHTML = ''
     var products = activeProducts()
@@ -991,9 +1032,15 @@
       el(
         'p',
         'module-head__lede',
-        'Stock, producción y merma. Tocá un producto para editar.'
+        'Tocá un producto para cambiar nombre, precio, stock o foto.'
       )
     )
+    var addLink = el('button', 'soft-link', 'Agregar producto')
+    addLink.type = 'button'
+    addLink.onclick = function () {
+      openProductDrawer(main, null)
+    }
+    copy.appendChild(addLink)
     head.appendChild(copy)
     var actions = el('div', 'module-head__actions')
     var btnProd = el('button', 'btn btn--secondary btn--sm', 'Producción')
@@ -1012,34 +1059,72 @@
     head.appendChild(actions)
     main.appendChild(head)
 
+    var filterWrap = el('div', 'field inv-filter')
+    var filterInp = document.createElement('input')
+    filterInp.type = 'search'
+    filterInp.className = 'field__input'
+    filterInp.placeholder = 'Buscar producto…'
+    filterInp.value = invFilter
+    filterInp.id = 'inv-search'
+    filterInp.setAttribute('autocapitalize', 'off')
+    filterInp.setAttribute('autocomplete', 'off')
+    filterWrap.appendChild(filterInp)
+    main.appendChild(filterWrap)
+
     var list = el('div', 'list')
-    if (!products.length) {
-      list.appendChild(el('div', 'row empty', 'Sin productos activos.'))
-    }
-    var i
-    for (i = 0; i < products.length; i++) {
-      ;(function (p) {
-        var row = el('div', 'row row--line row--tap')
-        var thumb = el('div', 'row__thumb')
-        thumb.style.backgroundImage =
-          'url("' + Lela.productImage(p).replace(/"/g, '') + '")'
-        var left = el('div', 'row__body')
-        left.appendChild(el('div', 'row__name', p.name))
-        left.appendChild(
+    list.id = 'inv-list'
+
+    function paintInvList() {
+      list.innerHTML = ''
+      var q = (invFilter || '').toLowerCase()
+      var shown = 0
+      var i
+      for (i = 0; i < products.length; i++) {
+        ;(function (p) {
+          var name = String(p.name || '')
+          if (q && name.toLowerCase().indexOf(q) === -1) return
+          shown++
+          var row = el('div', 'row row--line row--tap')
+          var thumb = el('div', 'row__thumb')
+          thumb.style.backgroundImage =
+            'url("' + Lela.productImage(p).replace(/"/g, '') + '")'
+          var left = el('div', 'row__body')
+          left.appendChild(el('div', 'row__name', name))
+          left.appendChild(
+            el(
+              'div',
+              'row__meta',
+              Lela.money(p.unitPrice) + ' · stock ' + stockOf(p)
+            )
+          )
+          row.appendChild(thumb)
+          row.appendChild(left)
+          row.onclick = function () {
+            openProductDrawer(main, p)
+          }
+          list.appendChild(row)
+        })(products[i])
+      }
+      if (!shown) {
+        list.appendChild(
           el(
             'div',
-            'row__meta',
-            Lela.money(p.unitPrice) + ' · stock ' + stockOf(p)
+            'row empty',
+            products.length
+              ? 'Ningún producto coincide.'
+              : 'Sin productos activos.'
           )
         )
-        row.appendChild(thumb)
-        row.appendChild(left)
-        row.onclick = function () {
-          openProductDrawer(main, p)
-        }
-        list.appendChild(row)
-      })(products[i])
+      }
     }
+
+    function onInvSearch() {
+      invFilter = filterInp.value || ''
+      paintInvList()
+    }
+    filterInp.oninput = onInvSearch
+    filterInp.onkeyup = onInvSearch
+    paintInvList()
     main.appendChild(list)
 
     var recent = el('div', 'panel')

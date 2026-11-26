@@ -33,18 +33,26 @@
     main.innerHTML = html
   }
 
-  function toolbar(title, btnLabel, btnId) {
+  function toolbar(title, btnLabel, btnId, soft) {
     return (
-      '<div class="toolbar">' +
+      '<div class="toolbar' +
+      (soft ? ' toolbar--soft' : '') +
+      '">' +
       '<h2>' +
       esc(title) +
       '</h2>' +
       (btnLabel
-        ? '<button type="button" class="btn btn-primary btn-sm" id="' +
-          esc(btnId) +
-          '">' +
-          esc(btnLabel) +
-          '</button>'
+        ? soft
+          ? '<button type="button" class="soft-link" id="' +
+            esc(btnId) +
+            '">' +
+            esc(btnLabel) +
+            '</button>'
+          : '<button type="button" class="btn btn-primary btn-sm" id="' +
+            esc(btnId) +
+            '">' +
+            esc(btnLabel) +
+            '</button>'
         : '') +
       '</div>'
     )
@@ -421,23 +429,40 @@
     }
   }
 
+  var productsFilter = ''
+
   Lela.screens.products = function (main) {
     var snap = (Lela.state && Lela.state.snapshot) || {}
     var products = snap.products || []
-    var html = toolbar('Productos', 'Nueva', 'btn-new-product')
+    var html = toolbar('Productos', 'Agregar', 'btn-new-product', true)
+    html +=
+      '<div class="field catalog-filter">' +
+      '<input id="cat-search" class="field__input" type="search" placeholder="Buscar por nombre…" value="' +
+      esc(productsFilter) +
+      '" autocapitalize="off" autocomplete="off" />' +
+      '</div>'
     var rows = []
     var i
     for (i = 0; i < products.length; i++) {
       if (!Lela.isActive(products[i])) continue
       rows.push(products[i])
     }
-    if (!rows.length) {
-      html += emptyMsg('Sin productos activos.')
-    } else {
-      html += '<div class="list">'
-      for (i = 0; i < rows.length; i++) {
+    html += '<div class="list" id="cat-list"></div>'
+    setHtml(main, html)
+
+    function paintCatalog() {
+      var list = Lela.$('cat-list')
+      if (!list) return
+      var q = (productsFilter || '').toLowerCase()
+      var out = ''
+      var shown = 0
+      var j
+      for (j = 0; j < rows.length; j++) {
         ;(function (p) {
-          html +=
+          var name = String(p.name || '')
+          if (q && name.toLowerCase().indexOf(q) === -1) return
+          shown++
+          out +=
             '<div class="row row--tap" data-id="' +
             esc(p.id) +
             '">' +
@@ -446,41 +471,62 @@
             ')"' +
             '></div>' +
             '<div class="row__name">' +
-            esc(p.name) +
+            esc(name) +
             '</div>' +
             '<div class="row__meta">' +
             esc(Lela.money(p.unitPrice)) +
             ' · stock ' +
             esc(p.physicalStock != null ? p.physicalStock : 0) +
             '</div></div>'
-        })(rows[i])
+        })(rows[j])
       }
-      html += '</div>'
+      if (!shown) {
+        out =
+          '<div class="row empty">' +
+          esc(
+            rows.length
+              ? 'Ningún producto coincide.'
+              : 'Sin productos activos.'
+          ) +
+          '</div>'
+      }
+      list.innerHTML = out
+      var taps = list.querySelectorAll('.row--tap')
+      var t
+      for (t = 0; t < taps.length; t++) {
+        ;(function (el) {
+          el.onclick = function () {
+            var id = el.getAttribute('data-id')
+            var found = null
+            var k
+            for (k = 0; k < products.length; k++) {
+              if (products[k].id === id) {
+                found = products[k]
+                break
+              }
+            }
+            if (found) openProductDrawer(main, found)
+          }
+        })(taps[t])
+      }
     }
-    setHtml(main, html)
+
+    var search = Lela.$('cat-search')
+    if (search) {
+      function onCatSearch() {
+        productsFilter = search.value || ''
+        paintCatalog()
+      }
+      search.oninput = onCatSearch
+      search.onkeyup = onCatSearch
+    }
     var btn = Lela.$('btn-new-product')
     if (btn) {
       btn.onclick = function () {
         openProductDrawer(main, null)
       }
     }
-    var taps = main.querySelectorAll('.row--tap')
-    for (i = 0; i < taps.length; i++) {
-      ;(function (el) {
-        el.onclick = function () {
-          var id = el.getAttribute('data-id')
-          var found = null
-          var j
-          for (j = 0; j < products.length; j++) {
-            if (products[j].id === id) {
-              found = products[j]
-              break
-            }
-          }
-          if (found) openProductDrawer(main, found)
-        }
-      })(taps[i])
-    }
+    paintCatalog()
   }
 
   /* ---------- 3. Promos / combos ---------- */

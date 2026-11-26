@@ -44,7 +44,8 @@ npm.cmd run pack:portable
 ## Datos
 
 - SQLite durable (no se borra con git pull / ZIP): `%LOCALAPPDATA%\PanaderiaLela\data\panaderia-lela.sqlite`
-- Catálogo en git: `data/bundled/panaderia-lela.sqlite` — `Iniciar.bat` lo restaura si la PC tiene menos productos
+- Catálogo en git: `data/bundled/panaderia-lela.sqlite` — `Iniciar.bat` lo restaura si la PC tiene menos productos y **fusiona promos faltantes** (p. ej. Promo bonetes) sin pisar ventas
+- Productos clave (manitas, bonetes) se reactivan si vinieran inactivos
 - Si existe `data/` junto al programa con una BD más completa, se migra sola a AppData
 - Respaldos: `...\data\backups\` · seguridad ante update: `%LOCALAPPDATA%\PanaderiaLela\safety\`
 - Override: variable `LELA_DATA_DIR`
@@ -60,7 +61,8 @@ Paleta artesanal (crema, café, terracota). Tipografías autoalojadas: **Fraunce
 ### UI 2026-11-17 (rediseño integral + ops)
 
 - Tokens/primitivas en `src/index.css` + `src/styles/base.css` (`module-head`, `ds-toolbar`, `ds-table`, `ds-drawer`, botones, modales opacos)
-- POS: overlay a pantalla completa; dual-pane catálogo \| carrito/cobro (desktop); pasos en móvil
+- **Baseline UI: iPad** (lite ES5). POS lite: modal flotante + **Paga con**; inventario CRUD suave; catálogo con búsqueda por nombre
+- POS React: overlay a pantalla completa; dual-pane catálogo \| carrito/cobro (desktop); pasos en móvil
 - Empleado: Facturación · Inventario · **Cierre** (mismo flujo)
 - Admin: + **Dashboard** · **Configuración**
 - **Cierre** (`/admin`): dropdown **Caja · Conteo · Movimientos · Cerrar** (Cerrar = factura/resumen)
